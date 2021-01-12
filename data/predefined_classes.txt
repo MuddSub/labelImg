@@ -1,3 +1,5 @@
-gate
+bins
 buoys
+gate
+path marker
 torpedo board
