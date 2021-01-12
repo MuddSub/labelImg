@@ -105,6 +105,22 @@ Virtualenv can avoid a lot of the QT / Python version issues
 
 Note: The Last command gives you a nice .app file with a new SVG Icon in your /Applications folder. You can consider using the script: build-tools/build-for-macos.sh
 
+(When I tried this method, I came across some issues that were resolved by following these instructions: https://stackoverflow.com/questions/46986431/make-no-rule-to-make-target-qt5py3-stop/46991934
+
+alternatively, this worked for me (macOS):
+cd into the project directory
+
+.. code:: shell
+
+    pip install virtualenv
+    virtualenv venv
+    source venv/bin/activate
+    pip install -r requirements.txt #includes boto3 and requests
+    make qt5py3
+    python3 labelImg.py
+
+-H)
+
 
 Windows
 ^^^^^^^
