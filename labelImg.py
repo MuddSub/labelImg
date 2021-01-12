@@ -82,10 +82,10 @@ class MainWindow(QMainWindow, WindowMixin):
         self.stringBundle = StringBundle.getBundle()
         getStr = lambda strId: self.stringBundle.getString(strId)
 
-        # Save as Pascal voc xml
+        # Save as Yolo txt (changed from default using pascalvoc)
         self.defaultSaveDir = defaultSaveDir
-        self.usingPascalVocFormat = True
-        self.usingYoloFormat = False
+        self.usingYoloFormat = True
+        self.usingPascalVocFormat = False
 
         # For loading all image under a directory
         self.mImgList = []
@@ -221,8 +221,8 @@ class MainWindow(QMainWindow, WindowMixin):
         save = action(getStr('save'), self.saveFile,
                       'Ctrl+S', 'save', getStr('saveDetail'), enabled=False)
 
-        save_format = action('&PascalVOC', self.change_format,
-                      'Ctrl+', 'format_voc', getStr('changeSaveFormat'), enabled=True)
+        save_format = action('&Yolo', self.change_format,
+                      'Ctrl+', 'format_yolo', getStr('changeSaveFormat'), enabled=False)
 
         saveAs = action(getStr('saveAs'), self.saveFileAs,
                         'Ctrl+Shift+S', 'save-as', getStr('saveAsDetail'), enabled=False)
