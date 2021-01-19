@@ -147,6 +147,30 @@ class MainWindow(QMainWindow, WindowMixin):
         self.labelList.itemChanged.connect(self.labelItemChanged)
         listLayout.addWidget(self.labelList)
 
+        #create Login Dock
+        self.login = QDockWidget('Login', self)
+        self.loginLayout = QVBoxLayout(self)
+        self.loginWidget = QWidget(self)
+        self.nameLabel = QLabel("Enter your name", self)
+        self.nameTextbox = QLineEdit(self)
+        self.passLabel = QLabel("Enter your password", self)
+        self.passTextbox = QLineEdit(self)
+        self.button = QPushButton("Save", self)
+        self.button.clicked.connect(self.saveLogin)
+        self.loginInfo = QLabel("", self)
+
+        self.loginLayout.addWidget(self.nameLabel)
+        self.loginLayout.addWidget(self.nameTextbox)
+        self.loginLayout.addWidget(self.passLabel)
+        self.loginLayout.addWidget(self.passTextbox)
+        self.loginLayout.addWidget(self.button)
+        self.loginLayout.addWidget(self.loginInfo)
+        self.loginWidget.setLayout(self.loginLayout)
+        self.login.setWidget(self.loginWidget)
+        self.login.setMinimumHeight(400)
+        self.login.setMinimumWidth(400)
+        self.login.setFloating(True)
+
         self.dock = QDockWidget(getStr('boxLabelText'), self)
         self.dock.setObjectName(getStr('labels'))
         self.dock.setWidget(labelListContainer)
@@ -186,6 +210,7 @@ class MainWindow(QMainWindow, WindowMixin):
 
         self.setCentralWidget(scroll)
         self.addDockWidget(Qt.RightDockWidgetArea, self.dock)
+        self.addDockWidget(Qt.RightDockWidgetArea, self.login)
         self.addDockWidget(Qt.RightDockWidgetArea, self.filedock)
         self.filedock.setFeatures(QDockWidget.DockWidgetFloatable)
 
@@ -484,6 +509,19 @@ class MainWindow(QMainWindow, WindowMixin):
         if event.key() == Qt.Key_Control:
             # Draw rectangle if Ctrl is pressed
             self.canvas.setDrawingShapeToSquare(True)
+
+    def saveLogin(self):
+        self.name = self.nameTextbox.text()
+        self.password = self.passTextbox.text()
+        print("name is: ", self.name, " self.password: ", self.password)
+        self.loginLayout.removeWidget(self.loginInfo)
+        self.loginInfo.deleteLater()
+        self.loginInfo = QLabel("LabelImg, your name is: " + self.name + " password: " + self.password, self)
+        self.loginLayout.addWidget(self.loginInfo)
+        #self.loginWidget.setLayout(self.loginLayout)
+        self.__appname__ = "LabelImg, your name is: " + self.name + " password: " + self.password
+        self.setWindowTitle(self.__appname__)
+        self.login.setFloating(False)
 
     ## Support Functions ##
     def set_format(self, save_format):
