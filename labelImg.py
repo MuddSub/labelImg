@@ -1,9 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 import requests
-import boto3
-from botocore import UNSIGNED
-from botocore.client import Config
 
 import codecs
 import distutils.spawn
@@ -52,8 +49,8 @@ from libs.hashableQListWidgetItem import HashableQListWidgetItem
 
 __appname__ = 'labelImg'
 
-BUCKET_NAME = 'halu-test-bucket'
-client = boto3.client('s3', config=Config(signature_version=UNSIGNED))
+SERVER_IP = 'http://54.241.69.234'
+SERVER_PORT = '8080'
 
 
 class WindowMixin(object):
@@ -99,17 +96,16 @@ class MainWindow(QMainWindow, WindowMixin):
         self.usingYoloFormat = False
 
         # For loading all image under a directory
-        # self.mImgList = []
+        self.mImgList = []
 
-        self.mImgList = [
-            'https://halu-test-bucket.s3.amazonaws.com/image-data/_welcome.png'
-        ]
-        self.mImgList += [
-            'https://halu-test-bucket.s3.amazonaws.com/' + key['Key']
-            for key in client.list_objects(Bucket=BUCKET_NAME,
-                                           Prefix='image-data/')['Contents']
-            if key['Key'].endswith('.jpg')
-        ]
+        baseServerUrl = SERVER_IP + ':' + SERVER_PORT + '/'
+        imageFolderUrl = baseServerUrl + 'images/'
+        response = requests.get(imageFolderUrl)
+        responseText = response.text
+        pattern = '<a href=".*?">(.*?)</a>'
+        for f in re.findall(pattern, responseText):
+            self.mImgList.append(imageFolderUrl + f)
+        # print(self.mImgList)
 
         self.dirname = None
         self.labelHist = []
@@ -1498,6 +1494,7 @@ class MainWindow(QMainWindow, WindowMixin):
             self.loadFile(filename)
 
     def openFile(self, _value=False):
+        """opens the welcome image."""
         if not self.mayContinue():
             return
         """
@@ -1512,7 +1509,7 @@ class MainWindow(QMainWindow, WindowMixin):
             self, '%s - Choose Image or Label file' % __appname__, path,
             filters)
         """
-        filename = 'https://halu-test-bucket.s3.amazonaws.com/image-data/_welcome.png'
+        filename = self.mImgList[0]
         if filename:
             if isinstance(filename, (tuple, list)):
                 filename = filename[0]
