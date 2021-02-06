@@ -109,6 +109,7 @@ Note: The Last command gives you a nice .app file with a new SVG Icon in your /A
 
 alternatively, this worked for me (macOS):
 cd into the project directory
+
 .. code:: shell
 
     pip install virtualenv
