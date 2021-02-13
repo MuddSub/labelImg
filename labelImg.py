@@ -49,8 +49,10 @@ from libs.hashableQListWidgetItem import HashableQListWidgetItem
 
 __appname__ = 'labelImg'
 
-SERVER_IP = 'http://54.241.69.234'
+####################################
+SERVER_IP = 'http://134.173.43.20'  # exclude slash at the end
 SERVER_PORT = '8080'
+####################################
 
 
 class WindowMixin(object):
@@ -98,14 +100,15 @@ class MainWindow(QMainWindow, WindowMixin):
         # For loading all image under a directory
         self.mImgList = []
 
+        ####################################
         baseServerUrl = SERVER_IP + ':' + SERVER_PORT + '/'
         imageFolderUrl = baseServerUrl + 'images/'
         response = requests.get(imageFolderUrl)
         responseText = response.text
-        pattern = '<a href=".*?">(.*?)</a>'
+        pattern = '<a href=".*?\.(?:png|jpg|jpeg)">(.*?)</a>'
         for f in re.findall(pattern, responseText):
             self.mImgList.append(imageFolderUrl + f)
-        # print(self.mImgList)
+        ####################################
 
         self.dirname = None
         self.labelHist = []
