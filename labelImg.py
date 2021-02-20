@@ -52,6 +52,9 @@ __appname__ = 'labelImg'
 ####################################
 SERVER_IP = 'http://134.173.43.20'  # exclude slash at the end
 SERVER_PORT = '8080'
+## Make sure to navigate to the compData directory on the server and run
+## python -m http.server 8080
+## to start the python webserver
 ####################################
 
 
@@ -1534,7 +1537,6 @@ class MainWindow(QMainWindow, WindowMixin):
                 filename = self.mImgList[currIndex + 1]
 
         if filename:
-            print('filename ', filename)
             self.loadFile(filename)
 
     def openFile(self, _value=False):
