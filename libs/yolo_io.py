@@ -6,11 +6,12 @@ from xml.etree import ElementTree
 from xml.etree.ElementTree import Element, SubElement
 from lxml import etree
 import codecs
-from libs.constants import DEFAULT_ENCODING
+from libs.constants import DEFAULT_ENCODING, baseServerUrl
 import requests
 
 TXT_EXT = '.txt'
 ENCODE_METHOD = DEFAULT_ENCODING
+defaultClassListPath = baseServerUrl + 'classes.txt'
 
 
 class YOLOWriter:
@@ -55,78 +56,53 @@ class YOLOWriter:
 
         return classIndex, xcen, ycen, w, h
 
-    def save(self, classList=[], targetFile=None):
-
-        out_file = None  #Update yolo .txt
-        out_class_file = None  #Update class list .txt
-
-        if targetFile is None:
-            ###### need to modify
-            out_file = open(self.filename + TXT_EXT,
-                            'w',
-                            encoding=ENCODE_METHOD)
-            classesFile = os.path.join(
-                os.path.dirname(os.path.abspath(self.filename)), "classes.txt")
-            out_class_file = open(classesFile, 'w')
-
-        else:
-            ####### modify point
-            print('targetfile', targetFile)
-            faketargetfile = './test.txt'
-            print()
-            # out_file = codecs.open(targetFile, 'w', encoding=ENCODE_METHOD)
-            # out_file = codecs.open(faketargetfile, 'w', encoding=ENCODE_METHOD)
-            # classesFile = os.path.join(
-            #     # os.path.dirname(os.path.abspath(targetFile)), "classes.txt")
-            #     os.path.dirname(os.path.abspath(faketargetfile)),
-            #     "classes.txt")
-            # out_class_file = open(classesFile, 'w')
-
-        data = {}
+    def save(self, targetFile, classList=[]):
         labels = ''
-
         for box in self.boxlist:
             classIndex, xcen, ycen, w, h = self.BndBox2YoloLine(box, classList)
             # print (classIndex, xcen, ycen, w, h)
-
             label = "%d %.6f %.6f %.6f %.6f\n" % (classIndex, xcen, ycen, w, h)
             labels += label
-            # out_file.write(label)
         data = {'bboxes': labels}
 
-        # print (classList)
-        # print (out_class_file)
-        # for c in classList:
-        #     out_class_file.write(c + '\n')
-
+        # upload to server. any new uploads will override existing file.
         r = requests.put(targetFile, json=data)
         # check status code for response recieved
-        # success code - 200
+        # success code - 201: created
         print('r', r)
-        # print content of request
-        print('content\n', r.content)
-        print('headers\n', r.headers)
+        # print text of request
+        print('\ntext\n', r.text)
+        print('\content\n', r.content)
+        print('\nheaders\n', r.headers)
 
 
 class YoloReader:
-    def __init__(self, filepath, image, classListPath=None):
+    def __init__(self, filepath, image, classListPath=defaultClassListPath):
         # shapes type:
         # [labbel, [(x1,y1), (x2,y2), (x3,y3), (x4,y4)], color, color, difficult]
         self.shapes = []
         self.filepath = filepath
+        self.classListPath = classListPath
 
-        if classListPath is None:
-            dir_path = os.path.dirname(os.path.realpath(self.filepath))
-            self.classListPath = os.path.join(dir_path, "classes.txt")
-        else:
-            self.classListPath = classListPath
+        try:
+            classfilerequest = requests.get(self.classListPath)
+        except requests.exceptions.RequestException as e:
+            raise SystemExit(e)
 
-        # print (filepath, self.classListPath)
+        try:
+            bboxrequest = requests.get(self.filepath)
+            self.boxes = bboxrequest.content.decode().strip('\n').split('\n')
+        except requests.exceptions.RequestException as e:
+            if bboxrequest.status_code == 404:
+                print('no existing labels')
+                return False
+            else:
+                raise SystemExit(e)
 
-        classesFile = open(self.classListPath, 'r')
-        self.classes = classesFile.read().strip('\n').split('\n')
-
-        # print (self.classes)
+        # self.classes is a list of classes
+        self.classes = classfilerequest.content.decode().strip('\n').split(
+            '\n')
+        print('classes: ', self.classes)
 
         imgSize = [
             image.height(),
@@ -165,8 +141,11 @@ class YoloReader:
         return label, xmin, ymin, xmax, ymax
 
     def parseYoloFormat(self):
-        bndBoxFile = open(self.filepath, 'r')
+        bndBoxFile = self.boxes
         for bndBox in bndBoxFile:
+            if len(bndBox) == 0:
+                print('no existing labels')
+                return False
             classIndex, xcen, ycen, w, h = bndBox.split(' ')
             label, xmin, ymin, xmax, ymax = self.yoloLine2Shape(
                 classIndex, xcen, ycen, w, h)

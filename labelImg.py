@@ -40,28 +40,12 @@ from libs.labelDialog import LabelDialog
 from libs.colorDialog import ColorDialog
 from libs.labelFile import LabelFile, LabelFileError
 from libs.toolBar import ToolBar
-# from libs.pascal_voc_io import PascalVocReader
-# from libs.pascal_voc_io import XML_EXT
 from libs.yolo_io import YoloReader
 from libs.yolo_io import TXT_EXT
 from libs.ustr import ustr
 from libs.hashableQListWidgetItem import HashableQListWidgetItem
 
 __appname__ = 'labelImg'
-
-####################################
-SERVER_IP = 'http://134.173.43.20'  # exclude slash at the end
-SERVER_PORT = '8080'
-## Make sure to navigate to the compData directory on the server and run
-## python -m http.server 8080
-## to start the python webserver
-####################################
-####################################
-baseServerUrl = SERVER_IP + ':' + SERVER_PORT + '/'
-# baseLabelFolderUrl = baseServerUrl + 'labels/'
-baseLabelFolderUrl = baseServerUrl + 'images/'
-baseImageFolderUrl = baseServerUrl + 'images/'
-####################################
 
 
 class WindowMixin(object):
@@ -103,9 +87,6 @@ class MainWindow(QMainWindow, WindowMixin):
 
         # Save as Yolo txt (changed from default using pascalvoc)
         self.defaultSaveDir = defaultSaveDir
-        # print('self.defaultSaveDir', self.defaultSaveDir)
-        # print('baseLabelFolderUrl', baseLabelFolderUrl)
-        # print('defaultSaveDir', defaultSaveDir)
         self.usingYoloFormat = True
         self.usingPascalVocFormat = False
 
@@ -182,7 +163,9 @@ class MainWindow(QMainWindow, WindowMixin):
         self.login = QDockWidget('Login', self)
         self.loginLayout = QVBoxLayout(self)
         self.loginWidget = QWidget(self)
-        self.nameLabel = QLabel("Enter your Mudd email address without the domain (@hmc.edu or @g.hmc.edu) \n\nExample: My email is fwright@hmc.edu \n               I enter \"fwright\"", self)
+        self.nameLabel = QLabel(
+            "Enter your Mudd email address without the domain (@hmc.edu or @g.hmc.edu) \n\nExample: My email is fwright@hmc.edu \n               I enter \"fwright\"",
+            self)
         self.nameTextbox = QLineEdit(self)
         # self.passLabel = QLabel("Enter your password", self)
         # self.passTextbox = QLineEdit(self)
@@ -597,7 +580,6 @@ class MainWindow(QMainWindow, WindowMixin):
         self.move(position)
         saveDir = ustr(settings.get(SETTING_SAVE_DIR, None))
         #SETTING_SAVE_DIR = 'savedir', and settings.data is a dictionary. then settings.get() gets the value corresponding to the 'savedir' key. when i tested this, 'savedir' corresponded to an empty spring.
-        # print('settings data', settings.data)
 
         self.lastOpenDir = ustr(settings.get(SETTING_LAST_OPEN_DIR, None))
         if self.defaultSaveDir is None and saveDir is not None and os.path.exists(
@@ -664,8 +646,7 @@ class MainWindow(QMainWindow, WindowMixin):
         print("name is: ", self.name)
         self.loginLayout.removeWidget(self.loginInfo)
         self.loginInfo.deleteLater()
-        self.loginInfo = QLabel(
-            "labelImg, your name is: " + self.name)
+        self.loginInfo = QLabel("labelImg, your name is: " + self.name)
         self.loginLayout.addWidget(self.loginInfo)
         #self.loginWidget.setLayout(self.loginLayout)
         self.__appname__ = "labelImg, your name is: " + self.name
@@ -673,25 +654,6 @@ class MainWindow(QMainWindow, WindowMixin):
         self.login.setFloating(False)
 
     ## Support Functions ##
-    # def set_format(self, save_format):
-    #     if save_format == FORMAT_PASCALVOC:
-    #         self.actions.save_format.setText(FORMAT_PASCALVOC)
-    #         self.actions.save_format.setIcon(newIcon("format_voc"))
-    #         self.usingPascalVocFormat = True
-    #         self.usingYoloFormat = False
-    #         LabelFile.suffix = XML_EXT
-
-    #     elif save_format == FORMAT_YOLO:
-    #         self.actions.save_format.setText(FORMAT_YOLO)
-    #         self.actions.save_format.setIcon(newIcon("format_yolo"))
-    #         self.usingPascalVocFormat = False
-    #         self.usingYoloFormat = True
-    #         LabelFile.suffix = TXT_EXT
-
-    # def change_format(self):
-    #     if self.usingPascalVocFormat: self.set_format(FORMAT_YOLO)
-    #     elif self.usingYoloFormat: self.set_format(FORMAT_PASCALVOC)
-
     def noShapes(self):
         return not self.itemsToShapes
 
@@ -967,7 +929,6 @@ class MainWindow(QMainWindow, WindowMixin):
 
     def saveLabels(self, annotationFilePath):
         annotationFilePath = ustr(annotationFilePath)
-        print('saveLabels/annotationFilePath', annotationFilePath)
         # this is a path to the image.
 
         if self.labelFile is None:
@@ -987,19 +948,9 @@ class MainWindow(QMainWindow, WindowMixin):
         shapes = [format_shape(shape) for shape in self.canvas.shapes]
         # Can add differrent annotation formats here
         try:
-            # if self.usingPascalVocFormat is True:
-            #     #should never get here
-            #     if annotationFilePath[-4:].lower() != ".xml":
-            #         annotationFilePath += XML_EXT
-            #     self.labelFile.savePascalVocFormat(annotationFilePath, shapes,
-            #                                        self.filePath,
-            #                                        self.imageData,
-            #                                        self.lineColor.getRgb(),
-            #                                        self.fillColor.getRgb())
             if self.usingYoloFormat is True:
                 if annotationFilePath[-4:].lower() != ".txt":
                     annotationFilePath += TXT_EXT
-                    # wont this create an ending like .jpg.txt?
                 self.labelFile.saveYoloFormat(annotationFilePath, shapes,
                                               self.filePath, self.imageData,
                                               self.labelHist,
@@ -1192,25 +1143,14 @@ class MainWindow(QMainWindow, WindowMixin):
         self.addRecentFile(self.filePath)
         self.toggleActions(True)
 
-        # Label xml file and show bound box according to its filename
+        # Label txt file and show bound box according to its filename
         # if self.usingPascalVocFormat is True:
         if self.defaultSaveDir is not None:
             basename = os.path.basename(os.path.splitext(self.filePath)[0])
-            # xmlPath = os.path.join(self.defaultSaveDir, basename + XML_EXT)
             txtPath = os.path.join(self.defaultSaveDir, basename + TXT_EXT)
-            """Annotation file priority:
-            PascalXML > YOLO
-            """
-            # if os.path.isfile(xmlPath):
-            #     self.loadPascalXMLByFilename(xmlPath)
-            # elif os.path.isfile(txtPath):
             self.loadYOLOTXTByFilename(txtPath)
         else:
-            # xmlPath = os.path.splitext(filePath)[0] + XML_EXT
             txtPath = os.path.splitext(filePath)[0] + TXT_EXT
-            # if os.path.isfile(xmlPath):
-            #     self.loadPascalXMLByFilename(xmlPath)
-            # elif os.path.isfile(txtPath):
             self.loadYOLOTXTByFilename(txtPath)
 
         self.setWindowTitle(__appname__ + ' ' + filePath)
@@ -1588,9 +1528,6 @@ class MainWindow(QMainWindow, WindowMixin):
                 savedPath = os.path.join(ustr(self.defaultSaveDir),
                                          savedFileName)
                 self._saveFile(savedPath)
-                # print('self filepath', self.filePath)
-                # print('self imgFileName', imgFileName)
-                # print('self savedPath', savedPath)
         else:
             #should never reach here
             imgFileDir = os.path.dirname(self.filePath)
@@ -1610,28 +1547,6 @@ class MainWindow(QMainWindow, WindowMixin):
             savedFileName = os.path.splitext(imgFileName)[0]
             savedPath = os.path.join(ustr(self.defaultSaveDir), savedFileName)
             self._saveFile(savedPath)
-            # print('self filepath', self.filePath)
-            # print('self imgFileName', imgFileName)
-            # print('self savedPath', savedPath)
-
-    # def saveFileDialog(self, removeExt=True):
-    #     caption = '%s - Choose File' % __appname__
-    #     filters = 'File (*%s)' % LabelFile.suffix
-    #     openDialogPath = self.currentPath()
-    #     dlg = QFileDialog(self, caption, openDialogPath, filters)
-    #     dlg.setDefaultSuffix(LabelFile.suffix[1:])
-    #     dlg.setAcceptMode(QFileDialog.AcceptSave)
-    #     filenameWithoutExtension = os.path.splitext(self.filePath)[0]
-    #     dlg.selectFile(filenameWithoutExtension)
-    #     dlg.setOption(QFileDialog.DontUseNativeDialog, False)
-    #     if dlg.exec_():
-    #         fullFilePath = ustr(dlg.selectedFiles()[0])
-    #         if removeExt:
-    #             return os.path.splitext(fullFilePath)[
-    #                 0]  # Return file path without the extension.
-    #         else:
-    #             return fullFilePath
-    #     return ''
 
     def _saveFile(self, annotationFilePath):
         # (annotationFilePath is self.filePath passed in. this is an img file path.)
@@ -1725,31 +1640,19 @@ class MainWindow(QMainWindow, WindowMixin):
                     else:
                         self.labelHist.append(line)
 
-    # def loadPascalXMLByFilename(self, xmlPath):
-    # if self.filePath is None:
-    #     return
-    # if os.path.isfile(xmlPath) is False:
-    #     return
-
-    # self.set_format(FORMAT_PASCALVOC)
-
-    # tVocParseReader = PascalVocReader(xmlPath)
-    # shapes = tVocParseReader.getShapes()
-    # self.loadLabels(shapes)
-    # self.canvas.verified = tVocParseReader.verified
-
     def loadYOLOTXTByFilename(self, txtPath):
         if self.filePath is None:
             return
-        if os.path.isfile(txtPath) is False:
-            return
+        # if os.path.isfile(txtPath) is False:
+        #     return
 
-        self.set_format(FORMAT_YOLO)
+        # self.set_format(FORMAT_YOLO)
         tYoloParseReader = YoloReader(txtPath, self.image)
-        shapes = tYoloParseReader.getShapes()
-        print(shapes)
-        self.loadLabels(shapes)
-        self.canvas.verified = tYoloParseReader.verified
+        if tYoloParseReader:
+            shapes = tYoloParseReader.getShapes()
+            print(shapes)
+            self.loadLabels(shapes)
+            self.canvas.verified = tYoloParseReader.verified
 
     def togglePaintLabelsOption(self):
         for shape in self.canvas.shapes:

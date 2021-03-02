@@ -8,31 +8,56 @@ python startServer.py
 from http.server import HTTPServer, SimpleHTTPRequestHandler
 from os import curdir
 import json
+from copy import deepcopy
 
 
 class requestHandler(SimpleHTTPRequestHandler):
+    def _set_headers(self):
+        self.send_response(200)
+        self.send_header('Content-type', 'application/json')
+        self.end_headers()
+
+    def do_HEAD(self):
+        self._set_headers()
+
     def do_GET(self):
         SimpleHTTPRequestHandler.do_GET(self)
 
     def do_PUT(self):
-        if self.path.endswith('.txt'):
-            uploadpath = curdir + self.path
-            # print('self headers\n', self.headers)
-            length = self.headers['content-length']
-            databyt = self.rfile.read(int(length))
-            # print(type(databyt))
-            # print(databyt)
-            datajson = json.loads(databyt)
-            # print('datajson\n', datajson)
-
-            with open(uploadpath, 'w') as fh:
-                fh.write(datajson['bboxes'])
-
-            self.send_response(200)
-            # self.send_response(201, 'Created')
-            # self.send_header("Content-type", "text/html")
-
+        # refuse to receive non-json content
+        if self.headers['content-type'] != 'application/json':
+            self.send_response(400, 'content-type is not json')
             self.end_headers()
+            return
+
+        # check that url is correct:
+        if not self.path.endswith('.txt'):
+            self.send_response(400, 'Bad url')
+            self.end_headers()
+            return
+
+        uploadpath = curdir + self.path
+        # print('self headers\n', self.headers)
+
+        # read the message and convert it into a python dictionary
+        length = self.headers['content-length']
+        databyt = self.rfile.read(int(length))
+        datajson = json.loads(databyt)
+
+        with open(uploadpath, 'w') as fh:
+            # write the bbox data to the text file on the server
+            fh.write(datajson['bboxes'])
+
+        self.send_response(201, 'Created')
+
+        self.end_headers()
+        # add a property to the object, just to mess with data
+        message = deepcopy(datajson)
+        message['received'] = 'ok'
+
+        # send the message back
+        self._set_headers()
+        self.wfile.write(json.dumps(message))
 
     def do_POST(self):
         self.do_PUT()
