@@ -7,6 +7,7 @@ from xml.etree.ElementTree import Element, SubElement
 from lxml import etree
 import codecs
 from libs.constants import DEFAULT_ENCODING
+import requests
 
 TXT_EXT = '.txt'
 ENCODE_METHOD = DEFAULT_ENCODING
@@ -60,6 +61,7 @@ class YOLOWriter:
         out_class_file = None  #Update class list .txt
 
         if targetFile is None:
+            ###### need to modify
             out_file = open(self.filename + TXT_EXT,
                             'w',
                             encoding=ENCODE_METHOD)
@@ -68,24 +70,42 @@ class YOLOWriter:
             out_class_file = open(classesFile, 'w')
 
         else:
-            out_file = codecs.open(targetFile, 'w', encoding=ENCODE_METHOD)
-            classesFile = os.path.join(
-                os.path.dirname(os.path.abspath(targetFile)), "classes.txt")
-            out_class_file = open(classesFile, 'w')
+            ####### modify point
+            print('targetfile', targetFile)
+            faketargetfile = './test.txt'
+            print()
+            # out_file = codecs.open(targetFile, 'w', encoding=ENCODE_METHOD)
+            # out_file = codecs.open(faketargetfile, 'w', encoding=ENCODE_METHOD)
+            # classesFile = os.path.join(
+            #     # os.path.dirname(os.path.abspath(targetFile)), "classes.txt")
+            #     os.path.dirname(os.path.abspath(faketargetfile)),
+            #     "classes.txt")
+            # out_class_file = open(classesFile, 'w')
+
+        data = {}
+        labels = ''
 
         for box in self.boxlist:
             classIndex, xcen, ycen, w, h = self.BndBox2YoloLine(box, classList)
             # print (classIndex, xcen, ycen, w, h)
-            out_file.write("%d %.6f %.6f %.6f %.6f\n" %
-                           (classIndex, xcen, ycen, w, h))
+
+            label = "%d %.6f %.6f %.6f %.6f\n" % (classIndex, xcen, ycen, w, h)
+            labels += label
+            # out_file.write(label)
+        data = {'bboxes': labels}
 
         # print (classList)
         # print (out_class_file)
-        for c in classList:
-            out_class_file.write(c + '\n')
+        # for c in classList:
+        #     out_class_file.write(c + '\n')
 
-        out_class_file.close()
-        out_file.close()
+        r = requests.put(targetFile, json=data)
+        # check status code for response recieved
+        # success code - 200
+        print('r', r)
+        # print content of request
+        print('content\n', r.content)
+        print('headers\n', r.headers)
 
 
 class YoloReader:

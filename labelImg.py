@@ -40,8 +40,8 @@ from libs.labelDialog import LabelDialog
 from libs.colorDialog import ColorDialog
 from libs.labelFile import LabelFile, LabelFileError
 from libs.toolBar import ToolBar
-from libs.pascal_voc_io import PascalVocReader
-from libs.pascal_voc_io import XML_EXT
+# from libs.pascal_voc_io import PascalVocReader
+# from libs.pascal_voc_io import XML_EXT
 from libs.yolo_io import YoloReader
 from libs.yolo_io import TXT_EXT
 from libs.ustr import ustr
@@ -55,6 +55,12 @@ SERVER_PORT = '8080'
 ## Make sure to navigate to the compData directory on the server and run
 ## python -m http.server 8080
 ## to start the python webserver
+####################################
+####################################
+baseServerUrl = SERVER_IP + ':' + SERVER_PORT + '/'
+# baseLabelFolderUrl = baseServerUrl + 'labels/'
+baseLabelFolderUrl = baseServerUrl + 'images/'
+baseImageFolderUrl = baseServerUrl + 'images/'
 ####################################
 
 
@@ -82,7 +88,7 @@ class MainWindow(QMainWindow, WindowMixin):
     def __init__(self,
                  defaultFilename=None,
                  defaultPrefdefClassFile=None,
-                 defaultSaveDir=None):
+                 defaultSaveDir=baseLabelFolderUrl):
         super(MainWindow, self).__init__()
         self.setWindowTitle(__appname__)
 
@@ -97,6 +103,9 @@ class MainWindow(QMainWindow, WindowMixin):
 
         # Save as Yolo txt (changed from default using pascalvoc)
         self.defaultSaveDir = defaultSaveDir
+        # print('self.defaultSaveDir', self.defaultSaveDir)
+        # print('baseLabelFolderUrl', baseLabelFolderUrl)
+        # print('defaultSaveDir', defaultSaveDir)
         self.usingYoloFormat = True
         self.usingPascalVocFormat = False
 
@@ -104,13 +113,11 @@ class MainWindow(QMainWindow, WindowMixin):
         self.mImgList = []
 
         ####################################
-        baseServerUrl = SERVER_IP + ':' + SERVER_PORT + '/'
-        imageFolderUrl = baseServerUrl + 'images/'
-        response = requests.get(imageFolderUrl)
+        response = requests.get(baseImageFolderUrl)
         responseText = response.text
         pattern = '<a href=".*?\.(?:png|jpg|jpeg)">(.*?)</a>'
         for f in re.findall(pattern, responseText):
-            self.mImgList.append(imageFolderUrl + f)
+            self.mImgList.append(baseImageFolderUrl + f)
         ####################################
 
         self.dirname = None
@@ -254,9 +261,9 @@ class MainWindow(QMainWindow, WindowMixin):
         # opendir = action(getStr('openDir'), self.openDirDialog, 'Ctrl+u',
         #                  'open', getStr('openDir'))
 
-        changeSavedir = action(getStr('changeSaveDir'),
-                               self.changeSavedirDialog, 'Ctrl+r', 'open',
-                               getStr('changeSavedAnnotationDir'))
+        # changeSavedir = action(getStr('changeSaveDir'),
+        #                        self.changeSavedirDialog, 'Ctrl+r', 'open',
+        #                        getStr('changeSavedAnnotationDir'))
 
         openAnnotation = action(getStr('openAnnotation'),
                                 self.openAnnotationDialog, 'Ctrl+Shift+O',
@@ -278,12 +285,12 @@ class MainWindow(QMainWindow, WindowMixin):
                       getStr('saveDetail'),
                       enabled=False)
 
-        save_format = action('&Yolo',
-                             self.change_format,
-                             'Ctrl+',
-                             'format_yolo',
-                             getStr('changeSaveFormat'),
-                             enabled=False)
+        # save_format = action('&Yolo',
+        #                      self.change_format,
+        #                      'Ctrl+',
+        #                      'format_yolo',
+        #                      getStr('changeSaveFormat'),
+        #                      enabled=False)
 
         saveAs = action(getStr('saveAs'),
                         self.saveFileAs,
@@ -453,7 +460,7 @@ class MainWindow(QMainWindow, WindowMixin):
         # Store actions for further handling.
         self.actions = struct(
             save=save,
-            save_format=save_format,
+            # save_format=save_format,
             saveAs=saveAs,
             open=open,
             close=close,
@@ -518,10 +525,9 @@ class MainWindow(QMainWindow, WindowMixin):
         #            (open, opendir, changeSavedir, openAnnotation,
         #             self.menus.recentFiles, save, save_format, saveAs, close,
         #             resetAll, quit))
-        addActions(
-            self.menus.file,
-            (open, changeSavedir, openAnnotation, self.menus.recentFiles, save,
-             save_format, saveAs, close, resetAll, quit))
+        addActions(self.menus.file,
+                   (open, openAnnotation, self.menus.recentFiles, save, saveAs,
+                    close, resetAll, quit))
         addActions(self.menus.help, (help, showInfo))
         addActions(
             self.menus.view,
@@ -547,14 +553,12 @@ class MainWindow(QMainWindow, WindowMixin):
         #                          openPrevImg, save, save_format, None,
         #                          createMode, editMode, None, hideAll, showAll)
 
-        self.actions.beginner = (open, changeSavedir, openNextImg, openPrevImg,
-                                 verify, save, save_format, None, create, copy,
-                                 delete, None, zoomIn, zoom, zoomOut,
-                                 fitWindow, fitWidth)
+        self.actions.beginner = (open, openNextImg, openPrevImg, verify, save,
+                                 None, create, copy, delete, None, zoomIn,
+                                 zoom, zoomOut, fitWindow, fitWidth)
 
-        self.actions.advanced = (open, changeSavedir, openNextImg, openPrevImg,
-                                 save, save_format, None, createMode, editMode,
-                                 None, hideAll, showAll)
+        self.actions.advanced = (open, openNextImg, openPrevImg, save, None,
+                                 createMode, editMode, None, hideAll, showAll)
 
         self.statusBar().showMessage('%s started.' % __appname__)
         self.statusBar().show()
@@ -592,9 +596,13 @@ class MainWindow(QMainWindow, WindowMixin):
         self.resize(size)
         self.move(position)
         saveDir = ustr(settings.get(SETTING_SAVE_DIR, None))
+        #SETTING_SAVE_DIR = 'savedir', and settings.data is a dictionary. then settings.get() gets the value corresponding to the 'savedir' key. when i tested this, 'savedir' corresponded to an empty spring.
+        # print('settings data', settings.data)
+
         self.lastOpenDir = ustr(settings.get(SETTING_LAST_OPEN_DIR, None))
         if self.defaultSaveDir is None and saveDir is not None and os.path.exists(
                 saveDir):
+            # we should have a defaultsavedir so we should never get here
             self.defaultSaveDir = saveDir
             self.statusBar().showMessage(
                 '%s started. Annotation will be saved to %s' %
@@ -666,24 +674,24 @@ class MainWindow(QMainWindow, WindowMixin):
         self.login.setFloating(False)
 
     ## Support Functions ##
-    def set_format(self, save_format):
-        if save_format == FORMAT_PASCALVOC:
-            self.actions.save_format.setText(FORMAT_PASCALVOC)
-            self.actions.save_format.setIcon(newIcon("format_voc"))
-            self.usingPascalVocFormat = True
-            self.usingYoloFormat = False
-            LabelFile.suffix = XML_EXT
+    # def set_format(self, save_format):
+    #     if save_format == FORMAT_PASCALVOC:
+    #         self.actions.save_format.setText(FORMAT_PASCALVOC)
+    #         self.actions.save_format.setIcon(newIcon("format_voc"))
+    #         self.usingPascalVocFormat = True
+    #         self.usingYoloFormat = False
+    #         LabelFile.suffix = XML_EXT
 
-        elif save_format == FORMAT_YOLO:
-            self.actions.save_format.setText(FORMAT_YOLO)
-            self.actions.save_format.setIcon(newIcon("format_yolo"))
-            self.usingPascalVocFormat = False
-            self.usingYoloFormat = True
-            LabelFile.suffix = TXT_EXT
+    #     elif save_format == FORMAT_YOLO:
+    #         self.actions.save_format.setText(FORMAT_YOLO)
+    #         self.actions.save_format.setIcon(newIcon("format_yolo"))
+    #         self.usingPascalVocFormat = False
+    #         self.usingYoloFormat = True
+    #         LabelFile.suffix = TXT_EXT
 
-    def change_format(self):
-        if self.usingPascalVocFormat: self.set_format(FORMAT_YOLO)
-        elif self.usingYoloFormat: self.set_format(FORMAT_PASCALVOC)
+    # def change_format(self):
+    #     if self.usingPascalVocFormat: self.set_format(FORMAT_YOLO)
+    #     elif self.usingYoloFormat: self.set_format(FORMAT_PASCALVOC)
 
     def noShapes(self):
         return not self.itemsToShapes
@@ -960,8 +968,12 @@ class MainWindow(QMainWindow, WindowMixin):
 
     def saveLabels(self, annotationFilePath):
         annotationFilePath = ustr(annotationFilePath)
+        print('saveLabels/annotationFilePath', annotationFilePath)
+        # this is a path to the image.
+
         if self.labelFile is None:
             self.labelFile = LabelFile()
+            # this is a LabelFile obj. default paths are None.
             self.labelFile.verified = self.canvas.verified
 
         def format_shape(s):
@@ -976,17 +988,19 @@ class MainWindow(QMainWindow, WindowMixin):
         shapes = [format_shape(shape) for shape in self.canvas.shapes]
         # Can add differrent annotation formats here
         try:
-            if self.usingPascalVocFormat is True:
-                if annotationFilePath[-4:].lower() != ".xml":
-                    annotationFilePath += XML_EXT
-                self.labelFile.savePascalVocFormat(annotationFilePath, shapes,
-                                                   self.filePath,
-                                                   self.imageData,
-                                                   self.lineColor.getRgb(),
-                                                   self.fillColor.getRgb())
-            elif self.usingYoloFormat is True:
+            # if self.usingPascalVocFormat is True:
+            #     #should never get here
+            #     if annotationFilePath[-4:].lower() != ".xml":
+            #         annotationFilePath += XML_EXT
+            #     self.labelFile.savePascalVocFormat(annotationFilePath, shapes,
+            #                                        self.filePath,
+            #                                        self.imageData,
+            #                                        self.lineColor.getRgb(),
+            #                                        self.fillColor.getRgb())
+            if self.usingYoloFormat is True:
                 if annotationFilePath[-4:].lower() != ".txt":
                     annotationFilePath += TXT_EXT
+                    # wont this create an ending like .jpg.txt?
                 self.labelFile.saveYoloFormat(annotationFilePath, shapes,
                                               self.filePath, self.imageData,
                                               self.labelHist,
@@ -1159,7 +1173,7 @@ class MainWindow(QMainWindow, WindowMixin):
             filePath = self.settings.get(SETTING_FILENAME)
 
         filePath = ustr(filePath)
-        print(filePath)
+        # print(filePath)
 
         self.image.loadFromData(requests.get(filePath).content)
 
@@ -1183,22 +1197,22 @@ class MainWindow(QMainWindow, WindowMixin):
         # if self.usingPascalVocFormat is True:
         if self.defaultSaveDir is not None:
             basename = os.path.basename(os.path.splitext(self.filePath)[0])
-            xmlPath = os.path.join(self.defaultSaveDir, basename + XML_EXT)
+            # xmlPath = os.path.join(self.defaultSaveDir, basename + XML_EXT)
             txtPath = os.path.join(self.defaultSaveDir, basename + TXT_EXT)
             """Annotation file priority:
             PascalXML > YOLO
             """
-            if os.path.isfile(xmlPath):
-                self.loadPascalXMLByFilename(xmlPath)
-            elif os.path.isfile(txtPath):
-                self.loadYOLOTXTByFilename(txtPath)
+            # if os.path.isfile(xmlPath):
+            #     self.loadPascalXMLByFilename(xmlPath)
+            # elif os.path.isfile(txtPath):
+            self.loadYOLOTXTByFilename(txtPath)
         else:
-            xmlPath = os.path.splitext(filePath)[0] + XML_EXT
+            # xmlPath = os.path.splitext(filePath)[0] + XML_EXT
             txtPath = os.path.splitext(filePath)[0] + TXT_EXT
-            if os.path.isfile(xmlPath):
-                self.loadPascalXMLByFilename(xmlPath)
-            elif os.path.isfile(txtPath):
-                self.loadYOLOTXTByFilename(txtPath)
+            # if os.path.isfile(xmlPath):
+            #     self.loadPascalXMLByFilename(xmlPath)
+            # elif os.path.isfile(txtPath):
+            self.loadYOLOTXTByFilename(txtPath)
 
         self.setWindowTitle(__appname__ + ' ' + filePath)
 
@@ -1359,7 +1373,9 @@ class MainWindow(QMainWindow, WindowMixin):
         settings[SETTING_FILL_COLOR] = self.fillColor
         settings[SETTING_RECENT_FILES] = self.recentFiles
         settings[SETTING_ADVANCE_MODE] = not self._beginner
-        if self.defaultSaveDir and os.path.exists(self.defaultSaveDir):
+        # if self.defaultSaveDir and os.path.exists(self.defaultSaveDir):
+        if self.defaultSaveDir is not None:
+            #we cant check if it exists locally since its a web url)
             settings[SETTING_SAVE_DIR] = ustr(self.defaultSaveDir)
         else:
             settings[SETTING_SAVE_DIR] = ''
@@ -1395,25 +1411,25 @@ class MainWindow(QMainWindow, WindowMixin):
         natural_sort(images, key=lambda x: x.lower())
         return images
 
-    def changeSavedirDialog(self, _value=False):
-        if self.defaultSaveDir is not None:
-            path = ustr(self.defaultSaveDir)
-        else:
-            path = '.'
+    # def changeSavedirDialog(self, _value=False):
+    #     if self.defaultSaveDir is not None:
+    #         path = ustr(self.defaultSaveDir)
+    #     else:
+    #         path = '.'
 
-        dirpath = ustr(
-            QFileDialog.getExistingDirectory(
-                self, '%s - Save annotations to the directory' % __appname__,
-                path, QFileDialog.ShowDirsOnly
-                | QFileDialog.DontResolveSymlinks))
+    #     dirpath = ustr(
+    #         QFileDialog.getExistingDirectory(
+    #             self, '%s - Save annotations to the directory' % __appname__,
+    #             path, QFileDialog.ShowDirsOnly
+    #             | QFileDialog.DontResolveSymlinks))
 
-        if dirpath is not None and len(dirpath) > 1:
-            self.defaultSaveDir = dirpath
+    #     if dirpath is not None and len(dirpath) > 1:
+    #         self.defaultSaveDir = dirpath
 
-        self.statusBar().showMessage(
-            '%s . Annotation will be saved to %s' %
-            ('Change saved folder', self.defaultSaveDir))
-        self.statusBar().show()
+    #     self.statusBar().showMessage(
+    #         '%s . Annotation will be saved to %s' %
+    #         ('Change saved folder', self.defaultSaveDir))
+    #     self.statusBar().show()
 
     def openAnnotationDialog(self, _value=False):
         if self.filePath is None:
@@ -1434,26 +1450,26 @@ class MainWindow(QMainWindow, WindowMixin):
                     filename = filename[0]
             self.loadPascalXMLByFilename(filename)
 
-    def openDirDialog(self, _value=False, dirpath=None, silent=False):
-        if not self.mayContinue():
-            return
+    # def openDirDialog(self, _value=False, dirpath=None, silent=False):
+    #     if not self.mayContinue():
+    #         return
 
-        defaultOpenDirPath = dirpath if dirpath else '.'
-        if self.lastOpenDir and os.path.exists(self.lastOpenDir):
-            defaultOpenDirPath = self.lastOpenDir
-        else:
-            defaultOpenDirPath = os.path.dirname(
-                self.filePath) if self.filePath else '.'
-        if silent != True:
-            targetDirPath = ustr(
-                QFileDialog.getExistingDirectory(
-                    self, '%s - Open Directory' % __appname__,
-                    defaultOpenDirPath, QFileDialog.ShowDirsOnly
-                    | QFileDialog.DontResolveSymlinks))
-        else:
-            targetDirPath = ustr(defaultOpenDirPath)
+    #     defaultOpenDirPath = dirpath if dirpath else '.'
+    #     if self.lastOpenDir and os.path.exists(self.lastOpenDir):
+    #         defaultOpenDirPath = self.lastOpenDir
+    #     else:
+    #         defaultOpenDirPath = os.path.dirname(
+    #             self.filePath) if self.filePath else '.'
+    #     if silent != True:
+    #         targetDirPath = ustr(
+    #             QFileDialog.getExistingDirectory(
+    #                 self, '%s - Open Directory' % __appname__,
+    #                 defaultOpenDirPath, QFileDialog.ShowDirsOnly
+    #                 | QFileDialog.DontResolveSymlinks))
+    #     else:
+    #         targetDirPath = ustr(defaultOpenDirPath)
 
-        self.importDirImages(targetDirPath)
+    #     self.importDirImages(targetDirPath)
 
     def importDirImages(self, dirpath):
         if not self.mayContinue() or not dirpath:
@@ -1494,7 +1510,10 @@ class MainWindow(QMainWindow, WindowMixin):
                 if self.dirty is True:
                     self.saveFile()
             else:
-                self.changeSavedirDialog()
+                # self.changeSavedirDialog()
+                print(
+                    'ERROR! we should never get here. deal w cleaning this later'
+                )
                 return
 
         if not self.mayContinue():
@@ -1519,7 +1538,8 @@ class MainWindow(QMainWindow, WindowMixin):
                 if self.dirty is True:
                     self.saveFile()
             else:
-                self.changeSavedirDialog()
+                # self.changeSavedirDialog()
+                print('error, we shouldnt get here, clean this up later')
                 return
 
         if not self.mayContinue():
@@ -1569,7 +1589,11 @@ class MainWindow(QMainWindow, WindowMixin):
                 savedPath = os.path.join(ustr(self.defaultSaveDir),
                                          savedFileName)
                 self._saveFile(savedPath)
+                # print('self filepath', self.filePath)
+                # print('self imgFileName', imgFileName)
+                # print('self savedPath', savedPath)
         else:
+            #should never reach here
             imgFileDir = os.path.dirname(self.filePath)
             imgFileName = os.path.basename(self.filePath)
             savedFileName = os.path.splitext(imgFileName)[0]
@@ -1579,28 +1603,39 @@ class MainWindow(QMainWindow, WindowMixin):
 
     def saveFileAs(self, _value=False):
         assert not self.image.isNull(), "cannot save empty image"
-        self._saveFile(self.saveFileDialog())
+        # self._saveFile(self.saveFileDialog())
+        # self.saveFileDialog() returns a path; we just want to save it to the
+        # web server.
+        if self.filePath:
+            imgFileName = os.path.basename(self.filePath)
+            savedFileName = os.path.splitext(imgFileName)[0]
+            savedPath = os.path.join(ustr(self.defaultSaveDir), savedFileName)
+            self._saveFile(savedPath)
+            # print('self filepath', self.filePath)
+            # print('self imgFileName', imgFileName)
+            # print('self savedPath', savedPath)
 
-    def saveFileDialog(self, removeExt=True):
-        caption = '%s - Choose File' % __appname__
-        filters = 'File (*%s)' % LabelFile.suffix
-        openDialogPath = self.currentPath()
-        dlg = QFileDialog(self, caption, openDialogPath, filters)
-        dlg.setDefaultSuffix(LabelFile.suffix[1:])
-        dlg.setAcceptMode(QFileDialog.AcceptSave)
-        filenameWithoutExtension = os.path.splitext(self.filePath)[0]
-        dlg.selectFile(filenameWithoutExtension)
-        dlg.setOption(QFileDialog.DontUseNativeDialog, False)
-        if dlg.exec_():
-            fullFilePath = ustr(dlg.selectedFiles()[0])
-            if removeExt:
-                return os.path.splitext(fullFilePath)[
-                    0]  # Return file path without the extension.
-            else:
-                return fullFilePath
-        return ''
+    # def saveFileDialog(self, removeExt=True):
+    #     caption = '%s - Choose File' % __appname__
+    #     filters = 'File (*%s)' % LabelFile.suffix
+    #     openDialogPath = self.currentPath()
+    #     dlg = QFileDialog(self, caption, openDialogPath, filters)
+    #     dlg.setDefaultSuffix(LabelFile.suffix[1:])
+    #     dlg.setAcceptMode(QFileDialog.AcceptSave)
+    #     filenameWithoutExtension = os.path.splitext(self.filePath)[0]
+    #     dlg.selectFile(filenameWithoutExtension)
+    #     dlg.setOption(QFileDialog.DontUseNativeDialog, False)
+    #     if dlg.exec_():
+    #         fullFilePath = ustr(dlg.selectedFiles()[0])
+    #         if removeExt:
+    #             return os.path.splitext(fullFilePath)[
+    #                 0]  # Return file path without the extension.
+    #         else:
+    #             return fullFilePath
+    #     return ''
 
     def _saveFile(self, annotationFilePath):
+        # (annotationFilePath is self.filePath passed in. this is an img file path.)
         if annotationFilePath and self.saveLabels(annotationFilePath):
             self.setClean()
             self.statusBar().showMessage('Saved to  %s' % annotationFilePath)
@@ -1691,18 +1726,18 @@ class MainWindow(QMainWindow, WindowMixin):
                     else:
                         self.labelHist.append(line)
 
-    def loadPascalXMLByFilename(self, xmlPath):
-        if self.filePath is None:
-            return
-        if os.path.isfile(xmlPath) is False:
-            return
+    # def loadPascalXMLByFilename(self, xmlPath):
+    # if self.filePath is None:
+    #     return
+    # if os.path.isfile(xmlPath) is False:
+    #     return
 
-        self.set_format(FORMAT_PASCALVOC)
+    # self.set_format(FORMAT_PASCALVOC)
 
-        tVocParseReader = PascalVocReader(xmlPath)
-        shapes = tVocParseReader.getShapes()
-        self.loadLabels(shapes)
-        self.canvas.verified = tVocParseReader.verified
+    # tVocParseReader = PascalVocReader(xmlPath)
+    # shapes = tVocParseReader.getShapes()
+    # self.loadLabels(shapes)
+    # self.canvas.verified = tVocParseReader.verified
 
     def loadYOLOTXTByFilename(self, txtPath):
         if self.filePath is None:
@@ -1751,7 +1786,8 @@ def get_main_app(argv=[]):
         argv[1] if len(argv) >= 2 else None,
         argv[2] if len(argv) >= 3 else os.path.join(
             os.path.dirname(sys.argv[0]), 'data', 'predefined_classes.txt'),
-        argv[3] if len(argv) >= 4 else None)
+        # argv[3] if len(argv) >= 4 else None
+    )
     win.show()
     return app, win
 
