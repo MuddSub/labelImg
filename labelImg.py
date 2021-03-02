@@ -182,23 +182,23 @@ class MainWindow(QMainWindow, WindowMixin):
         self.login = QDockWidget('Login', self)
         self.loginLayout = QVBoxLayout(self)
         self.loginWidget = QWidget(self)
-        self.nameLabel = QLabel("Enter your name", self)
+        self.nameLabel = QLabel("Enter your Mudd email address without the domain (@hmc.edu or @g.hmc.edu) \n\nExample: My email is fwright@hmc.edu \n               I enter \"fwright\"", self)
         self.nameTextbox = QLineEdit(self)
-        self.passLabel = QLabel("Enter your password", self)
-        self.passTextbox = QLineEdit(self)
+        # self.passLabel = QLabel("Enter your password", self)
+        # self.passTextbox = QLineEdit(self)
         self.button = QPushButton("Save", self)
         self.button.clicked.connect(self.saveLogin)
         self.loginInfo = QLabel("", self)
 
         self.loginLayout.addWidget(self.nameLabel)
         self.loginLayout.addWidget(self.nameTextbox)
-        self.loginLayout.addWidget(self.passLabel)
-        self.loginLayout.addWidget(self.passTextbox)
+        # self.loginLayout.addWidget(self.passLabel)
+        # self.loginLayout.addWidget(self.passTextbox)
         self.loginLayout.addWidget(self.button)
         self.loginLayout.addWidget(self.loginInfo)
         self.loginWidget.setLayout(self.loginLayout)
         self.login.setWidget(self.loginWidget)
-        self.login.setMinimumHeight(400)
+        self.login.setMinimumHeight(200)
         self.login.setMinimumWidth(400)
         self.login.setFloating(True)
 
@@ -660,16 +660,15 @@ class MainWindow(QMainWindow, WindowMixin):
 
     def saveLogin(self):
         self.name = self.nameTextbox.text()
-        self.password = self.passTextbox.text()
-        print("name is: ", self.name, " self.password: ", self.password)
+        # self.password = self.passTextbox.text()
+        print("name is: ", self.name)
         self.loginLayout.removeWidget(self.loginInfo)
         self.loginInfo.deleteLater()
         self.loginInfo = QLabel(
-            "LabelImg, your name is: " + self.name + " password: " +
-            self.password, self)
+            "labelImg, your name is: " + self.name)
         self.loginLayout.addWidget(self.loginInfo)
         #self.loginWidget.setLayout(self.loginLayout)
-        self.__appname__ = "LabelImg, your name is: " + self.name + " password: " + self.password
+        self.__appname__ = "labelImg, your name is: " + self.name
         self.setWindowTitle(self.__appname__)
         self.login.setFloating(False)
 
