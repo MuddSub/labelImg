@@ -1648,9 +1648,9 @@ class MainWindow(QMainWindow, WindowMixin):
 
         # self.set_format(FORMAT_YOLO)
         tYoloParseReader = YoloReader(txtPath, self.image)
-        if tYoloParseReader:
-            shapes = tYoloParseReader.getShapes()
-            print(shapes)
+        shapes = tYoloParseReader.getShapes()
+        print(shapes)
+        if len(shapes) > 0:
             self.loadLabels(shapes)
             self.canvas.verified = tYoloParseReader.verified
 

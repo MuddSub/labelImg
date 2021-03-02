@@ -87,17 +87,21 @@ class YoloReader:
         try:
             classfilerequest = requests.get(self.classListPath)
         except requests.exceptions.RequestException as e:
-            raise SystemExit(e)
+            print('no existing classes.txt file on server')
+            print(e)
+            return
 
         try:
             bboxrequest = requests.get(self.filepath)
             self.boxes = bboxrequest.content.decode().strip('\n').split('\n')
+            if bboxrequest.status_code >= 400:
+                print('error searching for existing label file')
+                if bboxrequest.status_code == 404:
+                    print('no existing labelfile on server')
+                return
         except requests.exceptions.RequestException as e:
-            if bboxrequest.status_code == 404:
-                print('no existing labels')
-                return False
-            else:
-                raise SystemExit(e)
+            print(e)
+            return
 
         # self.classes is a list of classes
         self.classes = classfilerequest.content.decode().strip('\n').split(
@@ -145,7 +149,7 @@ class YoloReader:
         for bndBox in bndBoxFile:
             if len(bndBox) == 0:
                 print('no existing labels')
-                return False
+                return
             classIndex, xcen, ycen, w, h = bndBox.split(' ')
             label, xmin, ymin, xmax, ymax = self.yoloLine2Shape(
                 classIndex, xcen, ycen, w, h)
