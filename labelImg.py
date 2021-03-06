@@ -9,6 +9,7 @@ import platform
 import re
 import sys
 import subprocess
+from time import sleep
 
 from functools import partial
 from collections import defaultdict
@@ -69,10 +70,15 @@ class WindowMixin(object):
 class MainWindow(QMainWindow, WindowMixin):
     FIT_WINDOW, FIT_WIDTH, MANUAL_ZOOM = list(range(3))
 
-    def __init__(self,
-                 defaultFilename=None,
-                 defaultPrefdefClassFile=None,
-                 defaultSaveDir=baseLabelFolderUrl):
+    def __init__(
+        self,
+        defaultFilename=None,
+        defaultPrefdefClassFile=None,
+        #  defaultSaveDir=baseLabelFolderUrl
+    ):
+        """ Note: defaultSaveDir has been replaced by DefaultLabelDir and 
+            DefaultImgDir. 
+        """
         super(MainWindow, self).__init__()
         self.setWindowTitle(__appname__)
 
@@ -86,24 +92,19 @@ class MainWindow(QMainWindow, WindowMixin):
         getStr = lambda strId: self.stringBundle.getString(strId)
 
         # Save as Yolo txt (changed from default using pascalvoc)
-        self.defaultSaveDir = defaultSaveDir
+
+        self.dirname = None
+        self.labelHist = []
+        self.lastOpenDir = None
+
+        self.sharedFolderName = ''
+        self.defaultImgDir = ''
+        self.defaultLabelDir = ''
         self.usingYoloFormat = True
         self.usingPascalVocFormat = False
 
         # For loading all image under a directory
         self.mImgList = []
-
-        ####################################
-        response = requests.get(baseImageFolderUrl)
-        responseText = response.text
-        pattern = '<a href=".*?\.(?:png|jpg|jpeg)">(.*?)</a>'
-        for f in re.findall(pattern, responseText):
-            self.mImgList.append(baseImageFolderUrl + f)
-        ####################################
-
-        self.dirname = None
-        self.labelHist = []
-        self.lastOpenDir = None
 
         # Whether we need to save or not.
         self.dirty = False
@@ -137,11 +138,37 @@ class MainWindow(QMainWindow, WindowMixin):
         useDefaultLabelContainer.setLayout(useDefaultLabelQHBoxLayout)
 
         # Create a widget for edit and diffc button
-        self.diffcButton = QCheckBox(getStr('useDifficult'))
-        self.diffcButton.setChecked(False)
-        self.diffcButton.stateChanged.connect(self.btnstate)
+        # self.diffcButton = QCheckBox(getStr('useDifficult'))
+        # self.diffcButton.setChecked(False)
+        # self.diffcButton.stateChanged.connect(self.btnstate)
         self.editButton = QToolButton()
         self.editButton.setToolButtonStyle(Qt.ToolButtonTextBesideIcon)
+
+        #create Login Dock
+        self.name = ''
+        self.login = QDockWidget('Login', self)
+        self.loginLayout = QVBoxLayout(self)
+        self.loginWidget = QWidget(self)
+        self.nameLabel = QLabel(
+            "Enter your Mudd email address without the domain (@hmc.edu or @g.hmc.edu) \n\nExample: My email is fwright@hmc.edu \n               I enter \"fwright\"",
+            self)
+        self.nameTextbox = QLineEdit(self)
+        # self.passLabel = QLabel("Enter your password", self)
+        # self.passTextbox = QLineEdit(self)
+        self.button = QPushButton("Save", self)
+        self.button.clicked.connect(self.saveLogin)
+        self.loginInfo = QLabel("", self)
+        self.loginLayout.addWidget(self.nameLabel)
+        self.loginLayout.addWidget(self.nameTextbox)
+        # self.loginLayout.addWidget(self.passLabel)
+        # self.loginLayout.addWidget(self.passTextbox)
+        self.loginLayout.addWidget(self.button)
+        self.loginLayout.addWidget(self.loginInfo)
+        self.loginWidget.setLayout(self.loginLayout)
+        self.login.setWidget(self.loginWidget)
+        self.login.setMinimumHeight(200)
+        self.login.setMinimumWidth(400)
+        self.login.setFloating(True)
 
         # Add some of widgets to listLayout
         listLayout.addWidget(self.editButton)
@@ -158,32 +185,6 @@ class MainWindow(QMainWindow, WindowMixin):
         # Connect to itemChanged to detect checkbox changes.
         self.labelList.itemChanged.connect(self.labelItemChanged)
         listLayout.addWidget(self.labelList)
-
-        #create Login Dock
-        self.login = QDockWidget('Login', self)
-        self.loginLayout = QVBoxLayout(self)
-        self.loginWidget = QWidget(self)
-        self.nameLabel = QLabel(
-            "Enter your Mudd email address without the domain (@hmc.edu or @g.hmc.edu) \n\nExample: My email is fwright@hmc.edu \n               I enter \"fwright\"",
-            self)
-        self.nameTextbox = QLineEdit(self)
-        # self.passLabel = QLabel("Enter your password", self)
-        # self.passTextbox = QLineEdit(self)
-        self.button = QPushButton("Save", self)
-        self.button.clicked.connect(self.saveLogin)
-        self.loginInfo = QLabel("", self)
-
-        self.loginLayout.addWidget(self.nameLabel)
-        self.loginLayout.addWidget(self.nameTextbox)
-        # self.loginLayout.addWidget(self.passLabel)
-        # self.loginLayout.addWidget(self.passTextbox)
-        self.loginLayout.addWidget(self.button)
-        self.loginLayout.addWidget(self.loginInfo)
-        self.loginWidget.setLayout(self.loginLayout)
-        self.login.setWidget(self.loginWidget)
-        self.login.setMinimumHeight(200)
-        self.login.setMinimumWidth(400)
-        self.login.setFloating(True)
 
         self.dock = QDockWidget(getStr('boxLabelText'), self)
         self.dock.setObjectName(getStr('labels'))
@@ -240,13 +241,6 @@ class MainWindow(QMainWindow, WindowMixin):
 
         open = action(getStr('openFile'), self.openFile, 'Ctrl+O', 'open',
                       getStr('openFileDetail'))
-
-        # opendir = action(getStr('openDir'), self.openDirDialog, 'Ctrl+u',
-        #                  'open', getStr('openDir'))
-
-        # changeSavedir = action(getStr('changeSaveDir'),
-        #                        self.changeSavedirDialog, 'Ctrl+r', 'open',
-        #                        getStr('changeSavedAnnotationDir'))
 
         openAnnotation = action(getStr('openAnnotation'),
                                 self.openAnnotationDialog, 'Ctrl+Shift+O',
@@ -582,14 +576,15 @@ class MainWindow(QMainWindow, WindowMixin):
         #SETTING_SAVE_DIR = 'savedir', and settings.data is a dictionary. then settings.get() gets the value corresponding to the 'savedir' key. when i tested this, 'savedir' corresponded to an empty spring.
 
         self.lastOpenDir = ustr(settings.get(SETTING_LAST_OPEN_DIR, None))
-        if self.defaultSaveDir is None and saveDir is not None and os.path.exists(
-                saveDir):
-            # we should have a defaultsavedir so we should never get here
-            self.defaultSaveDir = saveDir
-            self.statusBar().showMessage(
-                '%s started. Annotation will be saved to %s' %
-                (__appname__, self.defaultSaveDir))
-            self.statusBar().show()
+
+        # we should have a defaultsavedir so we shouldnt need this anymore:
+        # if self.defaultSaveDir is None and saveDir is not None and os.path.exists(
+        #         saveDir):
+        #     self.defaultSaveDir = saveDir
+        #     self.statusBar().showMessage(
+        #         '%s started. Annotation will be saved to %s' %
+        #         (__appname__, self.defaultSaveDir))
+        #     self.statusBar().show()
 
         self.restoreState(settings.get(SETTING_WIN_STATE, QByteArray()))
         Shape.line_color = self.lineColor = QColor(
@@ -628,6 +623,7 @@ class MainWindow(QMainWindow, WindowMixin):
         self.statusBar().addPermanentWidget(self.labelCoordinates)
 
         # Open Dir if deafult file
+        ###### should we remove this?
         if self.filePath and os.path.isdir(self.filePath):
             self.openDirDialog(dirpath=self.filePath, silent=True)
 
@@ -643,7 +639,6 @@ class MainWindow(QMainWindow, WindowMixin):
     def saveLogin(self):
         self.name = self.nameTextbox.text()
         # self.password = self.passTextbox.text()
-        print("name is: ", self.name)
         self.loginLayout.removeWidget(self.loginInfo)
         self.loginInfo.deleteLater()
         self.loginInfo = QLabel("labelImg, your name is: " + self.name)
@@ -652,6 +647,41 @@ class MainWindow(QMainWindow, WindowMixin):
         self.__appname__ = "labelImg, your name is: " + self.name
         self.setWindowTitle(self.__appname__)
         self.login.setFloating(False)
+
+        #################################### - modifypoint -
+        self.sharedFolderName = self.findFolder()
+
+        ############ TODO: add error handling if findFolder returns None or
+        # self.name is empty.
+
+        # replace defaultSaveDir with defaultImgDir and defaultLabelDir:
+        if self.sharedFolderName is not None and len(self.sharedFolderName):
+            self.defaultImgDir = compDataUrl + self.sharedFolderName
+        else:
+            self.defaultImgDir = compDataUrl
+        self.defaultLabelDir = self.defaultImgDir + self.name + '/'
+        # e.g. self.defaultImgDir = '.../compData/erchen-halu'
+        # self.defaultLabelDir = '.../compData/erchen-halu/erchen'
+
+        response = requests.get(self.defaultImgDir)
+        responseText = response.text
+        pattern = '<a href=".*?\.(?:png|jpg|jpeg)">(.*?)</a>'
+        for f in re.findall(pattern, responseText):
+            self.mImgList.append(self.defaultImgDir + f)
+
+    def findFolder(self):  ## -modifypoint-
+        """
+        Given a name stored in self.name, find the folder assigned to that name
+        """
+        response = requests.get(compDataUrl)
+        responseText = response.text
+        pattern = '<a href=".*?(?:/)">(.*?)</a>'
+        for foldername in re.findall(pattern, responseText):
+            if foldername[:len(self.name)] == self.name:
+                return foldername + '/'
+            elif foldername[:len(foldername) - 1].endswith(self.name):
+                return foldername + '/'
+        return None
 
     ## Support Functions ##
     def noShapes(self):
@@ -979,7 +1009,7 @@ class MainWindow(QMainWindow, WindowMixin):
             self.canvas.selectShape(self.itemsToShapes[item])
             shape = self.itemsToShapes[item]
             # Add Chris
-            self.diffcButton.setChecked(shape.difficult)
+            # self.diffcButton.setChecked(shape.difficult)
 
     def labelItemChanged(self, item):
         shape = self.itemsToShapes[item]
@@ -1013,7 +1043,7 @@ class MainWindow(QMainWindow, WindowMixin):
             text = self.defaultLabelTextLine.text()
 
         # Add Chris
-        self.diffcButton.setChecked(False)
+        # self.diffcButton.setChecked(False)
         if text is not None:
             self.prevLabelText = text
             generate_color = generateColorByText(text)
@@ -1123,7 +1153,6 @@ class MainWindow(QMainWindow, WindowMixin):
             filePath = self.settings.get(SETTING_FILENAME)
 
         filePath = ustr(filePath)
-        # print(filePath)
 
         self.image.loadFromData(requests.get(filePath).content)
 
@@ -1144,14 +1173,16 @@ class MainWindow(QMainWindow, WindowMixin):
         self.toggleActions(True)
 
         # Label txt file and show bound box according to its filename
+
         # if self.usingPascalVocFormat is True:
-        if self.defaultSaveDir is not None:
-            basename = os.path.basename(os.path.splitext(self.filePath)[0])
-            txtPath = os.path.join(self.defaultSaveDir, basename + TXT_EXT)
-            self.loadYOLOTXTByFilename(txtPath)
-        else:
-            txtPath = os.path.splitext(filePath)[0] + TXT_EXT
-            self.loadYOLOTXTByFilename(txtPath)
+        # if self.defaultLabelDir is not None:
+        basename = os.path.basename(os.path.splitext(self.filePath)[0])
+        txtPath = os.path.join(self.defaultLabelDir, basename + TXT_EXT)
+        self.loadYOLOTXTByFilename(txtPath)
+        # else:
+        #     # should not reach this block since we set a defaultLabelDir
+        #     txtPath = os.path.splitext(filePath)[0] + TXT_EXT
+        #     self.loadYOLOTXTByFilename(txtPath)
 
         self.setWindowTitle(__appname__ + ' ' + filePath)
 
@@ -1312,12 +1343,12 @@ class MainWindow(QMainWindow, WindowMixin):
         settings[SETTING_FILL_COLOR] = self.fillColor
         settings[SETTING_RECENT_FILES] = self.recentFiles
         settings[SETTING_ADVANCE_MODE] = not self._beginner
+        #commented out below line since we cant check if it exists locally (its a web url)
         # if self.defaultSaveDir and os.path.exists(self.defaultSaveDir):
-        if self.defaultSaveDir is not None:
-            #we cant check if it exists locally since its a web url)
-            settings[SETTING_SAVE_DIR] = ustr(self.defaultSaveDir)
-        else:
-            settings[SETTING_SAVE_DIR] = ''
+        # if self.defaultSaveDir is not None:
+        settings[SETTING_SAVE_DIR] = ustr(self.defaultLabelDir)
+        # else:
+        #     settings[SETTING_SAVE_DIR] = ''
 
         if self.lastOpenDir and os.path.exists(self.lastOpenDir):
             settings[SETTING_LAST_OPEN_DIR] = self.lastOpenDir
@@ -1445,9 +1476,9 @@ class MainWindow(QMainWindow, WindowMixin):
     def openPrevImg(self, _value=False):
         # Proceding prev image without dialog if having any label
         if self.autoSaving.isChecked():
-            if self.defaultSaveDir is not None:
-                if self.dirty is True:
-                    self.saveFile()
+            # if self.defaultSaveDir is not None:
+            if self.dirty is True:
+                self.saveFile()
             else:
                 # self.changeSavedirDialog()
                 print(
@@ -1473,9 +1504,9 @@ class MainWindow(QMainWindow, WindowMixin):
     def openNextImg(self, _value=False):
         # Proceding prev image without dialog if having any label
         if self.autoSaving.isChecked():
-            if self.defaultSaveDir is not None:
-                if self.dirty is True:
-                    self.saveFile()
+            # if self.defaultSaveDir is not None:
+            if self.dirty is True:
+                self.saveFile()
             else:
                 # self.changeSavedirDialog()
                 print('error, we shouldnt get here, clean this up later')
@@ -1521,21 +1552,21 @@ class MainWindow(QMainWindow, WindowMixin):
             self.loadFile(filename)
 
     def saveFile(self, _value=False):
-        if self.defaultSaveDir is not None and len(ustr(self.defaultSaveDir)):
-            if self.filePath:
-                imgFileName = os.path.basename(self.filePath)
-                savedFileName = os.path.splitext(imgFileName)[0]
-                savedPath = os.path.join(ustr(self.defaultSaveDir),
-                                         savedFileName)
-                self._saveFile(savedPath)
-        else:
-            #should never reach here
-            imgFileDir = os.path.dirname(self.filePath)
+        # if self.defaultSaveDir is not None and len(ustr(self.defaultSaveDir)):
+        if self.filePath:
             imgFileName = os.path.basename(self.filePath)
             savedFileName = os.path.splitext(imgFileName)[0]
-            savedPath = os.path.join(imgFileDir, savedFileName)
-            self._saveFile(savedPath if self.labelFile else self.
-                           saveFileDialog(removeExt=False))
+            savedPath = os.path.join(ustr(self.defaultLabelDir), savedFileName)
+            self._saveFile(savedPath)
+
+        # else:
+        #     #should never reach here
+        #     imgFileDir = os.path.dirname(self.filePath)
+        #     imgFileName = os.path.basename(self.filePath)
+        #     savedFileName = os.path.splitext(imgFileName)[0]
+        #     savedPath = os.path.join(imgFileDir, savedFileName)
+        #     self._saveFile(savedPath if self.labelFile else self.
+        #                    saveFileDialog(removeExt=False))
 
     def saveFileAs(self, _value=False):
         assert not self.image.isNull(), "cannot save empty image"
@@ -1545,7 +1576,7 @@ class MainWindow(QMainWindow, WindowMixin):
         if self.filePath:
             imgFileName = os.path.basename(self.filePath)
             savedFileName = os.path.splitext(imgFileName)[0]
-            savedPath = os.path.join(ustr(self.defaultSaveDir), savedFileName)
+            savedPath = os.path.join(ustr(self.defaultLabelDir), savedFileName)
             self._saveFile(savedPath)
 
     def _saveFile(self, annotationFilePath):
