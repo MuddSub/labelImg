@@ -96,6 +96,7 @@ Virtualenv can avoid a lot of the QT / Python version issues
 cd into the project directory
 
 .. code:: shell
+
     brew install python3
     pip3 install pipenv
     pip install virtualenv
