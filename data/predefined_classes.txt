@@ -3,3 +3,4 @@ buoys
 gate
 path marker
 torpedo board
+torpedo target
