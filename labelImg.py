@@ -52,6 +52,8 @@ __appname__ = 'labelImg'
 class Login(QDialog):
     def __init__(self, parent=None):
         super(Login, self).__init__(parent)
+
+        # create login dock
         self.loginLayout = QVBoxLayout(self)
         self.loginWidget = QWidget(self)
         self.nameLabel = QLabel(
@@ -70,15 +72,25 @@ class Login(QDialog):
         self.loginWidget.setLayout(self.loginLayout)
         self.setMinimumHeight(200)
         self.setMinimumWidth(500)
+
+        # setup username info
         self.name = ''
+        self.authNames = []
 
     def handleLogin(self):
-        if (self.nameTextbox.text() != ''):
-            self.name = self.nameTextbox.text()
+        self.authNames = self.getNames()
+        self.name = self.nameTextbox.text()
+        if (self.nameTextbox.text() != '' and self.name in self.authNames):
             self.accept()
         else:
             QtWidgets.QMessageBox.warning(self, 'Error',
                                           'Bad user or password')
+
+    def getNames(self):
+        namesPath = baseServerUrl + 'names.txt'
+        namesResponse = requests.get(namesPath)
+        nameList = namesResponse.content.decode().strip('\n').split('\n')
+        return nameList
 
 
 class WindowMixin(object):
