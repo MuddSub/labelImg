@@ -249,6 +249,7 @@ class MainWindow(QMainWindow, WindowMixin):
         # verify = action(getStr('verifyImg'), self.verifyImg, 'space', 'verify',
         #                 getStr('verifyImgDetail'))
 
+
         save = action(getStr('save'),
                       self.saveFile,
                       'Ctrl+S',
@@ -256,12 +257,16 @@ class MainWindow(QMainWindow, WindowMixin):
                       getStr('saveDetail'),
                       enabled=False)
 
+
         saveAs = action(getStr('saveAs'),
                         self.saveFileAs,
                         'Ctrl+Shift+S',
                         'save-as',
                         getStr('saveAsDetail'),
                         enabled=False)
+
+        saveEmpty = action(getStr('saveEmpty'), self.saveFile, 'd', 'next',
+                                    getStr('nextImgDetail'))
 
         close = action(getStr('closeCur'), self.closeFile, 'Ctrl+W', 'close',
                        getStr('closeCurDetail'))
@@ -448,7 +453,7 @@ class MainWindow(QMainWindow, WindowMixin):
             zoomActions=zoomActions,
             #   fileMenuActions=(open, opendir, save, saveAs,
             #                    close, resetAll, quit),
-            fileMenuActions=(save, saveAs, close, resetAll, quit),
+            fileMenuActions=(save, saveAs, saveEmpty, close, resetAll, quit),
             beginner=(),
             advanced=(),
             editMenu=(edit, copy, delete, None, color1,
@@ -491,7 +496,7 @@ class MainWindow(QMainWindow, WindowMixin):
         #             resetAll, quit))
         addActions(
             self.menus.file,
-            (self.menus.recentFiles, save, saveAs, close, resetAll, quit))
+            (self.menus.recentFiles, save, saveAs, saveEmpty, close, resetAll, quit))
         addActions(self.menus.help, (help, showInfo))
         addActions(
             self.menus.view,
@@ -517,7 +522,7 @@ class MainWindow(QMainWindow, WindowMixin):
         #                          openPrevImg, save, save_format, None,
         #                          createMode, editMode, None, hideAll, showAll)
 
-        self.actions.beginner = (save, None, create, copy, delete, None,
+        self.actions.beginner = (save, None, saveEmpty, create, copy, delete, None,
                                  zoomIn, zoom, zoomOut, fitWindow, fitWidth)
 
         self.actions.advanced = (save, None, createMode, editMode, None,
@@ -669,9 +674,9 @@ class MainWindow(QMainWindow, WindowMixin):
         pattern = '<a href=".*?(?:/)">(.*?)</a>'
         for foldername in re.findall(pattern, responseText):
             if foldername[:len(self.name)] == self.name:
-                return foldername + '/'
+                return foldername
             elif foldername[:len(foldername) - 1].endswith(self.name):
-                return foldername + '/'
+                return foldername
         return None
 
     ## Support Functions ##
@@ -1551,6 +1556,7 @@ class MainWindow(QMainWindow, WindowMixin):
             savedPath = os.path.join(ustr(self.defaultLabelDir), savedFileName)
             self._saveFile(savedPath)
             self.openNextImg()
+
 
         # else:
         #     #should never reach here
