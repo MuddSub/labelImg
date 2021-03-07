@@ -49,6 +49,38 @@ from libs.hashableQListWidgetItem import HashableQListWidgetItem
 __appname__ = 'labelImg'
 
 
+class Login(QDialog):
+    def __init__(self, parent=None):
+        super(Login, self).__init__(parent)
+        self.loginLayout = QVBoxLayout(self)
+        self.loginWidget = QWidget(self)
+        self.nameLabel = QLabel(
+            "Enter your Mudd email address without the domain (@hmc.edu or @g.hmc.edu) \n\nExample: My email is fwright@hmc.edu \n               I enter \"fwright\"",
+            self)
+        self.nameTextbox = QLineEdit(self)
+        # self.passLabel = QLabel("Enter your password", self)
+        # self.passTextbox = QLineEdit(self)
+        self.button = QPushButton("Login", self)
+        self.button.clicked.connect(self.handleLogin)
+        self.loginLayout.addWidget(self.nameLabel)
+        self.loginLayout.addWidget(self.nameTextbox)
+        # self.loginLayout.addWidget(self.passLabel)
+        # self.loginLayout.addWidget(self.passTextbox)
+        self.loginLayout.addWidget(self.button)
+        self.loginWidget.setLayout(self.loginLayout)
+        self.setMinimumHeight(200)
+        self.setMinimumWidth(500)
+        self.name = ''
+
+    def handleLogin(self):
+        if (self.nameTextbox.text() != ''):
+            self.name = self.nameTextbox.text()
+            self.accept()
+        else:
+            QtWidgets.QMessageBox.warning(self, 'Error',
+                                          'Bad user or password')
+
+
 class WindowMixin(object):
     def menu(self, title, actions=None):
         menu = self.menuBar().addMenu(title)
@@ -70,7 +102,10 @@ class WindowMixin(object):
 class MainWindow(QMainWindow, WindowMixin):
     FIT_WINDOW, FIT_WIDTH, MANUAL_ZOOM = list(range(3))
 
-    def __init__(self, defaultFilename=None, defaultPrefdefClassFile=None):
+    def __init__(self,
+                 name,
+                 defaultFilename=None,
+                 defaultPrefdefClassFile=None):
         """ Note: defaultSaveDir has been replaced by DefaultLabelDir and 
             DefaultImgDir. 
         """
@@ -96,9 +131,40 @@ class MainWindow(QMainWindow, WindowMixin):
         self.labelHist = []
         self.lastOpenDir = None
 
-        self.sharedFolderName = ''
-        self.defaultImgDir = ''
-        self.defaultLabelDir = ''
+        #################################### - modifypoint -
+        self.name = name
+        self.sharedFolderName = self.findFolder()
+
+        # replace defaultSaveDir with defaultImgDir and defaultLabelDir:
+        if self.sharedFolderName is not None and len(self.sharedFolderName):
+            self.defaultImgDir = compDataUrl + self.sharedFolderName
+        else:
+            self.defaultImgDir = compDataUrl
+        self.defaultLabelDir = self.defaultImgDir + self.name + '/'
+        # e.g. self.defaultImgDir = '.../compData/erchen-halu'
+        # self.defaultLabelDir = '.../compData/erchen-halu/erchen'
+
+        # get a list of all the images (urls) in the imagefolder
+        response = requests.get(self.defaultImgDir)
+        responseText = response.text
+        pattern = '<a href=".*?\.(?:png|jpg|jpeg)">(.*?)</a>'
+        for f in re.findall(pattern, responseText):
+            imgPath = self.defaultImgDir + f
+            # basename = os.path.basename(os.path.splitext(imgPath)[0])
+            # txtPath = os.path.join(self.defaultLabelDir, basename + TXT_EXT)
+            # checkLabelResponse = requests.get(txtPath)
+            # if checkLabelResponse.status_code == 404:
+            #     # we only add the images that aren't already labeled. (if
+            #     # theyre already labeled, the label file should exist and
+            #     # return a 200 status code.)
+            self.mImgList.append(imgPath)
+
+        # set default image to first in the list of images, then open it as a background process
+        print('len', len(self.mImgList))
+        self.filePath = self.mImgList[0]
+        self.queueEvent(partial(self.loadFile, self.filePath))
+
+        ################################################################
 
         # Whether we need to save or not.
         self.dirty = False
@@ -137,32 +203,6 @@ class MainWindow(QMainWindow, WindowMixin):
         # self.diffcButton.stateChanged.connect(self.btnstate)
         self.editButton = QToolButton()
         self.editButton.setToolButtonStyle(Qt.ToolButtonTextBesideIcon)
-
-        #create Login Dock
-        self.name = ''
-        self.login = QDockWidget('Login', self)
-        self.loginLayout = QVBoxLayout(self)
-        self.loginWidget = QWidget(self)
-        self.nameLabel = QLabel(
-            "Enter your Mudd email address without the domain (@hmc.edu or @g.hmc.edu) \n\nExample: My email is fwright@hmc.edu \n               I enter \"fwright\"",
-            self)
-        self.nameTextbox = QLineEdit(self)
-        # self.passLabel = QLabel("Enter your password", self)
-        # self.passTextbox = QLineEdit(self)
-        self.button = QPushButton("Save", self)
-        self.button.clicked.connect(self.saveLogin)
-        self.loginInfo = QLabel("", self)
-        self.loginLayout.addWidget(self.nameLabel)
-        self.loginLayout.addWidget(self.nameTextbox)
-        # self.loginLayout.addWidget(self.passLabel)
-        # self.loginLayout.addWidget(self.passTextbox)
-        self.loginLayout.addWidget(self.button)
-        self.loginLayout.addWidget(self.loginInfo)
-        self.loginWidget.setLayout(self.loginLayout)
-        self.login.setWidget(self.loginWidget)
-        self.login.setMinimumHeight(200)
-        self.login.setMinimumWidth(400)
-        self.login.setFloating(True)
 
         # Add some of widgets to listLayout
         listLayout.addWidget(self.editButton)
@@ -221,7 +261,7 @@ class MainWindow(QMainWindow, WindowMixin):
 
         self.setCentralWidget(scroll)
         self.addDockWidget(Qt.RightDockWidgetArea, self.dock)
-        self.addDockWidget(Qt.RightDockWidgetArea, self.login)
+        # self.addDockWidget(Qt.RightDockWidgetArea, self.login)
         self.addDockWidget(Qt.RightDockWidgetArea, self.filedock)
         self.filedock.setFeatures(QDockWidget.DockWidgetFloatable)
 
@@ -249,14 +289,12 @@ class MainWindow(QMainWindow, WindowMixin):
         # verify = action(getStr('verifyImg'), self.verifyImg, 'space', 'verify',
         #                 getStr('verifyImgDetail'))
 
-
         save = action(getStr('save'),
                       self.saveFile,
                       'Ctrl+S',
                       'save',
                       getStr('saveDetail'),
                       enabled=False)
-
 
         saveAs = action(getStr('saveAs'),
                         self.saveFileAs,
@@ -266,7 +304,7 @@ class MainWindow(QMainWindow, WindowMixin):
                         enabled=False)
 
         saveEmpty = action(getStr('saveEmpty'), self.saveFile, 'd', 'next',
-                                    getStr('nextImgDetail'))
+                           getStr('nextImgDetail'))
 
         close = action(getStr('closeCur'), self.closeFile, 'Ctrl+W', 'close',
                        getStr('closeCurDetail'))
@@ -494,9 +532,8 @@ class MainWindow(QMainWindow, WindowMixin):
         #            (open, opendir, changeSavedir, openAnnotation,
         #             self.menus.recentFiles, save, save_format, saveAs, close,
         #             resetAll, quit))
-        addActions(
-            self.menus.file,
-            (self.menus.recentFiles, save, saveAs, saveEmpty, close, resetAll, quit))
+        addActions(self.menus.file, (self.menus.recentFiles, save, saveAs,
+                                     saveEmpty, close, resetAll, quit))
         addActions(self.menus.help, (help, showInfo))
         addActions(
             self.menus.view,
@@ -522,8 +559,9 @@ class MainWindow(QMainWindow, WindowMixin):
         #                          openPrevImg, save, save_format, None,
         #                          createMode, editMode, None, hideAll, showAll)
 
-        self.actions.beginner = (save, None, saveEmpty, create, copy, delete, None,
-                                 zoomIn, zoom, zoomOut, fitWindow, fitWidth)
+        self.actions.beginner = (save, None, saveEmpty, create, copy, delete,
+                                 None, zoomIn, zoom, zoomOut, fitWindow,
+                                 fitWidth)
 
         self.actions.advanced = (save, None, createMode, editMode, None,
                                  hideAll, showAll)
@@ -619,51 +657,17 @@ class MainWindow(QMainWindow, WindowMixin):
             # Draw rectangle if Ctrl is pressed
             self.canvas.setDrawingShapeToSquare(True)
 
-    def saveLogin(self):
-        self.name = self.nameTextbox.text()
-        # self.password = self.passTextbox.text()
-        self.loginLayout.removeWidget(self.loginInfo)
-        self.loginInfo.deleteLater()
-        self.loginInfo = QLabel("labelImg, your name is: " + self.name)
-        self.loginLayout.addWidget(self.loginInfo)
-        #self.loginWidget.setLayout(self.loginLayout)
-        self.__appname__ = "labelImg, your name is: " + self.name
-        self.setWindowTitle(self.__appname__)
-        self.login.setFloating(False)
-
-        #################################### - modifypoint -
-        self.sharedFolderName = self.findFolder()
-
-        ############ TODO: add error handling if findFolder returns None or
-        # self.name is empty.
-
-        # replace defaultSaveDir with defaultImgDir and defaultLabelDir:
-        if self.sharedFolderName is not None and len(self.sharedFolderName):
-            self.defaultImgDir = compDataUrl + self.sharedFolderName
-        else:
-            self.defaultImgDir = compDataUrl
-        self.defaultLabelDir = self.defaultImgDir + self.name + '/'
-        # e.g. self.defaultImgDir = '.../compData/erchen-halu'
-        # self.defaultLabelDir = '.../compData/erchen-halu/erchen'
-
-        # get a list of all the images (urls) in the imagefolder
-        response = requests.get(self.defaultImgDir)
-        responseText = response.text
-        pattern = '<a href=".*?\.(?:png|jpg|jpeg)">(.*?)</a>'
-        for f in re.findall(pattern, responseText):
-            imgPath = self.defaultImgDir + f
-            basename = os.path.basename(os.path.splitext(imgPath)[0])
-            txtPath = os.path.join(self.defaultLabelDir, basename + TXT_EXT)
-            checkLabelResponse = requests.get(txtPath)
-            if checkLabelResponse.status_code == 404:
-                # we only add the images that aren't already labeled. (if
-                # theyre already labeled, the label file should exist and
-                # return a 200 status code.)
-                self.mImgList.append(imgPath)
-
-        # set default image to first in the list of images, then open it as a background process
-        self.filePath = self.mImgList[0]
-        self.queueEvent(partial(self.loadFile, self.filePath))
+    # def saveLogin(self):
+    #     self.name = self.nameTextbox.text()
+    #     # self.password = self.passTextbox.text()
+    #     self.loginLayout.removeWidget(self.loginInfo)
+    #     self.loginInfo.deleteLater()
+    #     self.loginInfo = QLabel("labelImg, your name is: " + self.name)
+    #     self.loginLayout.addWidget(self.loginInfo)
+    #     #self.loginWidget.setLayout(self.loginLayout)
+    #     self.__appname__ = "labelImg, your name is: " + self.name
+    #     self.setWindowTitle(self.__appname__)
+    #     self.login.setFloating(False)
 
     def findFolder(self):  ## -modifypoint-
         """
@@ -1557,7 +1561,6 @@ class MainWindow(QMainWindow, WindowMixin):
             self._saveFile(savedPath)
             self.openNextImg()
 
-
         # else:
         #     #should never reach here
         #     imgFileDir = os.path.dirname(self.filePath)
@@ -1714,14 +1717,19 @@ def get_main_app(argv=[]):
     app.setWindowIcon(newIcon("app"))
     # Tzutalin 201705+: Accept extra agruments to change predefined class file
     # Usage : labelImg.py image predefClassFile saveDir
-    win = MainWindow(
-        argv[1] if len(argv) >= 2 else None,
-        argv[2] if len(argv) >= 3 else os.path.join(
-            os.path.dirname(sys.argv[0]), 'data', 'predefined_classes.txt'),
-        # argv[3] if len(argv) >= 4 else None
-    )
-    win.show()
-    return app, win
+    login = Login()
+
+    if login.exec_() == QDialog.Accepted:
+        win = MainWindow(
+            login.name,
+            argv[1] if len(argv) >= 2 else None,
+            argv[2] if len(argv) >= 3 else os.path.join(
+                os.path.dirname(sys.argv[0]), 'data',
+                'predefined_classes.txt'),
+            # argv[3] if len(argv) >= 4 else None
+        )
+        win.show()
+        return app, win
 
 
 def main():
