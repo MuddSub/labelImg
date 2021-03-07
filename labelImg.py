@@ -70,12 +70,7 @@ class WindowMixin(object):
 class MainWindow(QMainWindow, WindowMixin):
     FIT_WINDOW, FIT_WIDTH, MANUAL_ZOOM = list(range(3))
 
-    def __init__(
-        self,
-        defaultFilename=None,
-        defaultPrefdefClassFile=None,
-        #  defaultSaveDir=baseLabelFolderUrl
-    ):
+    def __init__(self, defaultFilename=None, defaultPrefdefClassFile=None):
         """ Note: defaultSaveDir has been replaced by DefaultLabelDir and 
             DefaultImgDir. 
         """
@@ -92,7 +87,11 @@ class MainWindow(QMainWindow, WindowMixin):
         getStr = lambda strId: self.stringBundle.getString(strId)
 
         # Save as Yolo txt (changed from default using pascalvoc)
+        self.usingYoloFormat = True
+        self.usingPascalVocFormat = False
 
+        # For loading all image under a directory
+        self.mImgList = []
         self.dirname = None
         self.labelHist = []
         self.lastOpenDir = None
@@ -100,11 +99,6 @@ class MainWindow(QMainWindow, WindowMixin):
         self.sharedFolderName = ''
         self.defaultImgDir = ''
         self.defaultLabelDir = ''
-        self.usingYoloFormat = True
-        self.usingPascalVocFormat = False
-
-        # For loading all image under a directory
-        self.mImgList = []
 
         # Whether we need to save or not.
         self.dirty = False
@@ -239,21 +233,21 @@ class MainWindow(QMainWindow, WindowMixin):
         quit = action(getStr('quit'), self.close, 'Ctrl+Q', 'quit',
                       getStr('quitApp'))
 
-        open = action(getStr('openFile'), self.openFile, 'Ctrl+O', 'open',
-                      getStr('openFileDetail'))
+        # open = action(getStr('openFile'), self.openFile, 'Ctrl+O', 'open',
+        #               getStr('openFileDetail'))
 
-        openAnnotation = action(getStr('openAnnotation'),
-                                self.openAnnotationDialog, 'Ctrl+Shift+O',
-                                'open', getStr('openAnnotationDetail'))
+        # openAnnotation = action(getStr('openAnnotation'),
+        #                         self.openAnnotationDialog, 'Ctrl+Shift+O',
+        #                         'open', getStr('openAnnotationDetail'))
 
-        openNextImg = action(getStr('nextImg'), self.openNextImg, 'd', 'next',
-                             getStr('nextImgDetail'))
+        # openNextImg = action(getStr('nextImg'), self.openNextImg, 'd', 'next',
+        #                      getStr('nextImgDetail'))
 
-        openPrevImg = action(getStr('prevImg'), self.openPrevImg, 'a', 'prev',
-                             getStr('prevImgDetail'))
+        # openPrevImg = action(getStr('prevImg'), self.openPrevImg, 'a', 'prev',
+        #                      getStr('prevImgDetail'))
 
-        verify = action(getStr('verifyImg'), self.verifyImg, 'space', 'verify',
-                        getStr('verifyImgDetail'))
+        # verify = action(getStr('verifyImg'), self.verifyImg, 'space', 'verify',
+        #                 getStr('verifyImgDetail'))
 
         save = action(getStr('save'),
                       self.saveFile,
@@ -261,13 +255,6 @@ class MainWindow(QMainWindow, WindowMixin):
                       'save',
                       getStr('saveDetail'),
                       enabled=False)
-
-        # save_format = action('&Yolo',
-        #                      self.change_format,
-        #                      'Ctrl+',
-        #                      'format_yolo',
-        #                      getStr('changeSaveFormat'),
-        #                      enabled=False)
 
         saveAs = action(getStr('saveAs'),
                         self.saveFileAs,
@@ -439,7 +426,7 @@ class MainWindow(QMainWindow, WindowMixin):
             save=save,
             # save_format=save_format,
             saveAs=saveAs,
-            open=open,
+            # open=open,
             close=close,
             resetAll=resetAll,
             lineColor=color1,
@@ -461,7 +448,7 @@ class MainWindow(QMainWindow, WindowMixin):
             zoomActions=zoomActions,
             #   fileMenuActions=(open, opendir, save, saveAs,
             #                    close, resetAll, quit),
-            fileMenuActions=(open, save, saveAs, close, resetAll, quit),
+            fileMenuActions=(save, saveAs, close, resetAll, quit),
             beginner=(),
             advanced=(),
             editMenu=(edit, copy, delete, None, color1,
@@ -502,9 +489,9 @@ class MainWindow(QMainWindow, WindowMixin):
         #            (open, opendir, changeSavedir, openAnnotation,
         #             self.menus.recentFiles, save, save_format, saveAs, close,
         #             resetAll, quit))
-        addActions(self.menus.file,
-                   (open, openAnnotation, self.menus.recentFiles, save, saveAs,
-                    close, resetAll, quit))
+        addActions(
+            self.menus.file,
+            (self.menus.recentFiles, save, saveAs, close, resetAll, quit))
         addActions(self.menus.help, (help, showInfo))
         addActions(
             self.menus.view,
@@ -530,12 +517,11 @@ class MainWindow(QMainWindow, WindowMixin):
         #                          openPrevImg, save, save_format, None,
         #                          createMode, editMode, None, hideAll, showAll)
 
-        self.actions.beginner = (open, openNextImg, openPrevImg, verify, save,
-                                 None, create, copy, delete, None, zoomIn,
-                                 zoom, zoomOut, fitWindow, fitWidth)
+        self.actions.beginner = (save, None, create, copy, delete, None,
+                                 zoomIn, zoom, zoomOut, fitWindow, fitWidth)
 
-        self.actions.advanced = (open, openNextImg, openPrevImg, save, None,
-                                 createMode, editMode, None, hideAll, showAll)
+        self.actions.advanced = (save, None, createMode, editMode, None,
+                                 hideAll, showAll)
 
         self.statusBar().showMessage('%s started.' % __appname__)
         self.statusBar().show()
@@ -550,7 +536,7 @@ class MainWindow(QMainWindow, WindowMixin):
         self.zoom_level = 100
         self.fit_window = False
         # Add Chris
-        self.difficult = False
+        # self.difficult = False
 
         ## Fix the compatible issue for qt4 and qt5. Convert the QStringList to python list
         if settings.get(SETTING_RECENT_FILES):
@@ -577,23 +563,15 @@ class MainWindow(QMainWindow, WindowMixin):
 
         self.lastOpenDir = ustr(settings.get(SETTING_LAST_OPEN_DIR, None))
 
-        # we should have a defaultsavedir so we shouldnt need this anymore:
-        # if self.defaultSaveDir is None and saveDir is not None and os.path.exists(
-        #         saveDir):
-        #     self.defaultSaveDir = saveDir
-        #     self.statusBar().showMessage(
-        #         '%s started. Annotation will be saved to %s' %
-        #         (__appname__, self.defaultSaveDir))
-        #     self.statusBar().show()
-
         self.restoreState(settings.get(SETTING_WIN_STATE, QByteArray()))
         Shape.line_color = self.lineColor = QColor(
             settings.get(SETTING_LINE_COLOR, DEFAULT_LINE_COLOR))
         Shape.fill_color = self.fillColor = QColor(
             settings.get(SETTING_FILL_COLOR, DEFAULT_FILL_COLOR))
         self.canvas.setDrawingColor(self.lineColor)
+
         # Add chris
-        Shape.difficult = self.difficult
+        # Shape.difficult = self.difficult
 
         def xbool(x):
             if isinstance(x, QVariant):
@@ -607,11 +585,14 @@ class MainWindow(QMainWindow, WindowMixin):
         # Populate the File menu dynamically.
         self.updateFileMenu()
 
+        ### (this section has been moved to the saveLogin function so that we 
+        # can open the first image automatically after name is inputted.) ###
+
         # Since loading the file may take some time, make sure it runs in the background.
-        if self.filePath and os.path.isdir(self.filePath):
-            self.queueEvent(partial(self.importDirImages, self.filePath or ""))
-        elif self.filePath:
-            self.queueEvent(partial(self.loadFile, self.filePath or ""))
+        # if self.filePath and os.path.isdir(self.filePath):
+        #     self.queueEvent(partial(self.importDirImages, self.filePath or ""))
+        # if self.filePath:
+        #     self.queueEvent(partial(self.loadFile, self.filePath or ""))
 
         # Callbacks:
         self.zoomWidget.valueChanged.connect(self.paintCanvas)
@@ -621,11 +602,6 @@ class MainWindow(QMainWindow, WindowMixin):
         # Display cursor coordinates at the right of status bar
         self.labelCoordinates = QLabel('')
         self.statusBar().addPermanentWidget(self.labelCoordinates)
-
-        # Open Dir if deafult file
-        ###### should we remove this?
-        if self.filePath and os.path.isdir(self.filePath):
-            self.openDirDialog(dirpath=self.filePath, silent=True)
 
     def keyReleaseEvent(self, event):
         if event.key() == Qt.Key_Control:
@@ -668,6 +644,10 @@ class MainWindow(QMainWindow, WindowMixin):
         pattern = '<a href=".*?\.(?:png|jpg|jpeg)">(.*?)</a>'
         for f in re.findall(pattern, responseText):
             self.mImgList.append(self.defaultImgDir + f)
+
+        # set default image to first in the list of images, then open it as a background process
+        self.filePath = self.mImgList[0]
+        self.queueEvent(partial(self.loadFile, self.filePath))
 
     def findFolder(self):  ## -modifypoint-
         """
@@ -1178,7 +1158,7 @@ class MainWindow(QMainWindow, WindowMixin):
         # if self.defaultLabelDir is not None:
         basename = os.path.basename(os.path.splitext(self.filePath)[0])
         txtPath = os.path.join(self.defaultLabelDir, basename + TXT_EXT)
-        self.loadYOLOTXTByFilename(txtPath)
+        # self.loadYOLOTXTByFilename(txtPath)
         # else:
         #     # should not reach this block since we set a defaultLabelDir
         #     txtPath = os.path.splitext(filePath)[0] + TXT_EXT
@@ -1401,24 +1381,25 @@ class MainWindow(QMainWindow, WindowMixin):
     #         ('Change saved folder', self.defaultSaveDir))
     #     self.statusBar().show()
 
-    def openAnnotationDialog(self, _value=False):
-        if self.filePath is None:
-            self.statusBar().showMessage('Please select image first')
-            self.statusBar().show()
-            return
+    # def openAnnotationDialog(self, _value=False):
+    #     if self.filePath is None:
+    #         self.statusBar().showMessage('Please select image first')
+    #         self.statusBar().show()
+    #         return
 
-        path = os.path.dirname(ustr(self.filePath))\
-            if self.filePath else '.'
-        if self.usingPascalVocFormat:
-            filters = "Open Annotation XML file (%s)" % ' '.join(['*.xml'])
-            filename = ustr(
-                QFileDialog.getOpenFileName(
-                    self, '%s - Choose a xml file' % __appname__, path,
-                    filters))
-            if filename:
-                if isinstance(filename, (tuple, list)):
-                    filename = filename[0]
-            self.loadPascalXMLByFilename(filename)
+    #     path = os.path.dirname(ustr(self.filePath))\
+    #         if self.filePath else '.'
+    #     print('openAnn path', path)
+    #     if self.usingPascalVocFormat:
+    #         filters = "Open Annotation XML file (%s)" % ' '.join(['*.xml'])
+    #         filename = ustr(
+    #             QFileDialog.getOpenFileName(
+    #                 self, '%s - Choose a xml file' % __appname__, path,
+    #                 filters))
+    #         if filename:
+    #             if isinstance(filename, (tuple, list)):
+    #                 filename = filename[0]
+    #         self.loadPascalXMLByFilename(filename)
 
     # def openDirDialog(self, _value=False, dirpath=None, silent=False):
     #     if not self.mayContinue():
@@ -1455,51 +1436,51 @@ class MainWindow(QMainWindow, WindowMixin):
             item = QListWidgetItem(imgPath)
             self.fileListWidget.addItem(item)
 
-    def verifyImg(self, _value=False):
-        # Proceding next image without dialog if having any label
-        if self.filePath is not None:
-            try:
-                self.labelFile.toggleVerify()
-            except AttributeError:
-                # If the labelling file does not exist yet, create if and
-                # re-save it with the verified attribute.
-                self.saveFile()
-                if self.labelFile != None:
-                    self.labelFile.toggleVerify()
-                else:
-                    return
+    # def verifyImg(self, _value=False):
+    #     # Proceding next image without dialog if having any label
+    #     if self.filePath is not None:
+    #         try:
+    #             self.labelFile.toggleVerify()
+    #         except AttributeError:
+    #             # If the labelling file does not exist yet, create if and
+    #             # re-save it with the verified attribute.
+    #             self.saveFile()
+    #             if self.labelFile != None:
+    #                 self.labelFile.toggleVerify()
+    #             else:
+    #                 return
 
-            self.canvas.verified = self.labelFile.verified
-            self.paintCanvas()
-            self.saveFile()
+    #         self.canvas.verified = self.labelFile.verified
+    #         self.paintCanvas()
+    #         self.saveFile()
 
-    def openPrevImg(self, _value=False):
-        # Proceding prev image without dialog if having any label
-        if self.autoSaving.isChecked():
-            # if self.defaultSaveDir is not None:
-            if self.dirty is True:
-                self.saveFile()
-            else:
-                # self.changeSavedirDialog()
-                print(
-                    'ERROR! we should never get here. deal w cleaning this later'
-                )
-                return
+    # def openPrevImg(self, _value=False):
+    #     # Proceding prev image without dialog if having any label
+    #     if self.autoSaving.isChecked():
+    #         # if self.defaultSaveDir is not None:
+    #         if self.dirty is True:
+    #             self.saveFile()
+    #         else:
+    #             # self.changeSavedirDialog()
+    #             print(
+    #                 'ERROR! we should never get here. deal w cleaning this later'
+    #             )
+    #             return
 
-        if not self.mayContinue():
-            return
+    #     if not self.mayContinue():
+    #         return
 
-        if len(self.mImgList) <= 0:
-            return
+    #     if len(self.mImgList) <= 0:
+    #         return
 
-        if self.filePath is None:
-            return
+    #     if self.filePath is None:
+    #         return
 
-        currIndex = self.mImgList.index(self.filePath)
-        if currIndex - 1 >= 0:
-            filename = self.mImgList[currIndex - 1]
-            if filename:
-                self.loadFile(filename)
+    #     currIndex = self.mImgList.index(self.filePath)
+    #     if currIndex - 1 >= 0:
+    #         filename = self.mImgList[currIndex - 1]
+    #         if filename:
+    #             self.loadFile(filename)
 
     def openNextImg(self, _value=False):
         # Proceding prev image without dialog if having any label
@@ -1529,8 +1510,8 @@ class MainWindow(QMainWindow, WindowMixin):
         if filename:
             self.loadFile(filename)
 
-    def openFile(self, _value=False):
-        """opens the welcome image."""
+    def openFirst(self, _value=False):
+        """opens the first unannotated image."""
         if not self.mayContinue():
             return
         """
@@ -1558,6 +1539,7 @@ class MainWindow(QMainWindow, WindowMixin):
             savedFileName = os.path.splitext(imgFileName)[0]
             savedPath = os.path.join(ustr(self.defaultLabelDir), savedFileName)
             self._saveFile(savedPath)
+            self.openNextImg()
 
         # else:
         #     #should never reach here
@@ -1671,19 +1653,19 @@ class MainWindow(QMainWindow, WindowMixin):
                     else:
                         self.labelHist.append(line)
 
-    def loadYOLOTXTByFilename(self, txtPath):
-        if self.filePath is None:
-            return
-        # if os.path.isfile(txtPath) is False:
-        #     return
+    # def loadYOLOTXTByFilename(self, txtPath):
+    #     if self.filePath is None:
+    #         return
+    #     # if os.path.isfile(txtPath) is False:
+    #     #     return
 
-        # self.set_format(FORMAT_YOLO)
-        tYoloParseReader = YoloReader(txtPath, self.image)
-        shapes = tYoloParseReader.getShapes()
-        print(shapes)
-        if len(shapes) > 0:
-            self.loadLabels(shapes)
-            self.canvas.verified = tYoloParseReader.verified
+    #     # self.set_format(FORMAT_YOLO)
+    #     tYoloParseReader = YoloReader(txtPath, self.image)
+    #     shapes = tYoloParseReader.getShapes()
+    #     print(shapes)
+    #     if len(shapes) > 0:
+    #         self.loadLabels(shapes)
+    #         self.canvas.verified = tYoloParseReader.verified
 
     def togglePaintLabelsOption(self):
         for shape in self.canvas.shapes:
