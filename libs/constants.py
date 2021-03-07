@@ -8,7 +8,7 @@ SERVER_PORT = '8080'
 ####################################
 baseServerUrl = SERVER_IP + ':' + SERVER_PORT + '/'
 # baseLabelFolderUrl = baseServerUrl + 'labels/'
-compDataUrl = baseServerUrl + 'practiceLabeling/'
+compDataUrl = baseServerUrl + 'compData/'
 ####################################
 
 SETTING_FILENAME = 'filename'
