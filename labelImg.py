@@ -585,7 +585,8 @@ class MainWindow(QMainWindow, WindowMixin):
         # Populate the File menu dynamically.
         self.updateFileMenu()
 
-        ### (this section has been moved to the saveLogin function so that we 
+        #############################################################
+        # (this section has been moved to the saveLogin function so that we
         # can open the first image automatically after name is inputted.) ###
 
         # Since loading the file may take some time, make sure it runs in the background.
@@ -593,6 +594,7 @@ class MainWindow(QMainWindow, WindowMixin):
         #     self.queueEvent(partial(self.importDirImages, self.filePath or ""))
         # if self.filePath:
         #     self.queueEvent(partial(self.loadFile, self.filePath or ""))
+        ################################################################
 
         # Callbacks:
         self.zoomWidget.valueChanged.connect(self.paintCanvas)
@@ -639,11 +641,20 @@ class MainWindow(QMainWindow, WindowMixin):
         # e.g. self.defaultImgDir = '.../compData/erchen-halu'
         # self.defaultLabelDir = '.../compData/erchen-halu/erchen'
 
+        # get a list of all the images (urls) in the imagefolder
         response = requests.get(self.defaultImgDir)
         responseText = response.text
         pattern = '<a href=".*?\.(?:png|jpg|jpeg)">(.*?)</a>'
         for f in re.findall(pattern, responseText):
-            self.mImgList.append(self.defaultImgDir + f)
+            imgPath = self.defaultImgDir + f
+            basename = os.path.basename(os.path.splitext(imgPath)[0])
+            txtPath = os.path.join(self.defaultLabelDir, basename + TXT_EXT)
+            checkLabelResponse = requests.get(txtPath)
+            if checkLabelResponse.status_code == 404:
+                # we only add the images that aren't already labeled. (if
+                # theyre already labeled, the label file should exist and
+                # return a 200 status code.)
+                self.mImgList.append(imgPath)
 
         # set default image to first in the list of images, then open it as a background process
         self.filePath = self.mImgList[0]
