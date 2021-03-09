@@ -1,14 +1,9 @@
 certifi==2020.12.5
 chardet==4.0.0
 idna==2.10
-jmespath==0.10.0
 libs==0.0.9
 lxml==4.6.2
 PyQt5==5.15.2
 PyQt5-sip==12.8.1
-python-dateutil==2.8.1
 requests==2.25.1
-six==1.15.0
 urllib3==1.26.2
-yamf==0.7
-yapf==0.30.0
