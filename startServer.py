@@ -46,18 +46,14 @@ class requestHandler(SimpleHTTPRequestHandler):
 
         with open(uploadpath, 'w') as fh:
             # write the bbox data to the text file on the server
-            fh.write(datajson['bboxes'])
+            if 'bboxes' in datajson:
+                fh.write(datajson['bboxes'])
+            elif 'numLabeled' in datajson:
+                fh.write(datajson['numLabeled'])
 
         self.send_response(201, 'Created')
 
         self.end_headers()
-        # add a property to the object, just to mess with data
-        message = deepcopy(datajson)
-        message['received'] = 'ok'
-
-        # send the message back
-        self._set_headers()
-        self.wfile.write(json.dumps(message))
 
     def do_POST(self):
         self.do_PUT()

@@ -70,10 +70,6 @@ class YOLOWriter:
         # check status code for response recieved
         # success code - 201: created
         print('r', r)
-        # print text of request
-        print('\ntext\n', r.text)
-        print('\content\n', r.content)
-        print('\nheaders\n', r.headers)
 
 
 class YoloReader:

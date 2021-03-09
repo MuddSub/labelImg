@@ -9,7 +9,6 @@ import platform
 import re
 import sys
 import subprocess
-from time import sleep
 
 from functools import partial
 from collections import defaultdict
@@ -143,7 +142,10 @@ class MainWindow(QMainWindow, WindowMixin):
         self.labelHist = []
         self.lastOpenDir = None
 
-        #################################### - modifypoint -
+        #################################### - modifypoint -####################
+        # get the image folder and label folder urls based on the users name,
+        # then load the first image.
+        ########################################################################
         self.name = name
         self.sharedFolderName = self.findFolder()
 
@@ -160,19 +162,24 @@ class MainWindow(QMainWindow, WindowMixin):
         response = requests.get(self.defaultImgDir)
         responseText = response.text
         pattern = '<a href=".*?\.(?:png|jpg|jpeg)">(.*?)</a>'
-        for f in re.findall(pattern, responseText):
-            imgPath = self.defaultImgDir + f
-            # basename = os.path.basename(os.path.splitext(imgPath)[0])
-            # txtPath = os.path.join(self.defaultLabelDir, basename + TXT_EXT)
-            # checkLabelResponse = requests.get(txtPath)
-            # if checkLabelResponse.status_code == 404:
-            #     # we only add the images that aren't already labeled. (if
-            #     # theyre already labeled, the label file should exist and
-            #     # return a 200 status code.)
+
+        # if 'bookmark.txt' exists in the labeltext directory, the update the
+        # number of images already labeled
+        self.bookmarkPath = self.defaultLabelDir + 'bookmark.txt'
+        bookmarkResponse = requests.get(self.bookmarkPath)
+        self.numLabeled = 0
+        if bookmarkResponse.status_code == 200:
+            bookmarkText = bookmarkResponse.text
+            self.numLabeled = int(bookmarkText)
+
+        # populate self.mImgList with the urls of all the unlabeled images
+        imgNames = re.findall(pattern, responseText)
+        for i in range(self.numLabeled, len(imgNames)):
+            imgPath = self.defaultImgDir + imgNames[i]
             self.mImgList.append(imgPath)
 
-        # set default image to first in the list of images, then open it as a background process
-        print('len', len(self.mImgList))
+        # set default image to the first image in the list of images, then open
+        # it as a background process
         self.filePath = self.mImgList[0]
         self.queueEvent(partial(self.loadFile, self.filePath))
 
@@ -210,9 +217,6 @@ class MainWindow(QMainWindow, WindowMixin):
         useDefaultLabelContainer.setLayout(useDefaultLabelQHBoxLayout)
 
         # Create a widget for edit and diffc button
-        # self.diffcButton = QCheckBox(getStr('useDifficult'))
-        # self.diffcButton.setChecked(False)
-        # self.diffcButton.stateChanged.connect(self.btnstate)
         self.editButton = QToolButton()
         self.editButton.setToolButtonStyle(Qt.ToolButtonTextBesideIcon)
 
@@ -273,7 +277,6 @@ class MainWindow(QMainWindow, WindowMixin):
 
         self.setCentralWidget(scroll)
         self.addDockWidget(Qt.RightDockWidgetArea, self.dock)
-        # self.addDockWidget(Qt.RightDockWidgetArea, self.login)
         self.addDockWidget(Qt.RightDockWidgetArea, self.filedock)
         self.filedock.setFeatures(QDockWidget.DockWidgetFloatable)
 
@@ -590,8 +593,6 @@ class MainWindow(QMainWindow, WindowMixin):
         self.fillColor = None
         self.zoom_level = 100
         self.fit_window = False
-        # Add Chris
-        # self.difficult = False
 
         ## Fix the compatible issue for qt4 and qt5. Convert the QStringList to python list
         if settings.get(SETTING_RECENT_FILES):
@@ -625,9 +626,6 @@ class MainWindow(QMainWindow, WindowMixin):
             settings.get(SETTING_FILL_COLOR, DEFAULT_FILL_COLOR))
         self.canvas.setDrawingColor(self.lineColor)
 
-        # Add chris
-        # Shape.difficult = self.difficult
-
         def xbool(x):
             if isinstance(x, QVariant):
                 return x.toBool()
@@ -639,17 +637,6 @@ class MainWindow(QMainWindow, WindowMixin):
 
         # Populate the File menu dynamically.
         self.updateFileMenu()
-
-        #############################################################
-        # (this section has been moved to the saveLogin function so that we
-        # can open the first image automatically after name is inputted.) ###
-
-        # Since loading the file may take some time, make sure it runs in the background.
-        # if self.filePath and os.path.isdir(self.filePath):
-        #     self.queueEvent(partial(self.importDirImages, self.filePath or ""))
-        # if self.filePath:
-        #     self.queueEvent(partial(self.loadFile, self.filePath or ""))
-        ################################################################
 
         # Callbacks:
         self.zoomWidget.valueChanged.connect(self.paintCanvas)
@@ -668,18 +655,6 @@ class MainWindow(QMainWindow, WindowMixin):
         if event.key() == Qt.Key_Control:
             # Draw rectangle if Ctrl is pressed
             self.canvas.setDrawingShapeToSquare(True)
-
-    # def saveLogin(self):
-    #     self.name = self.nameTextbox.text()
-    #     # self.password = self.passTextbox.text()
-    #     self.loginLayout.removeWidget(self.loginInfo)
-    #     self.loginInfo.deleteLater()
-    #     self.loginInfo = QLabel("labelImg, your name is: " + self.name)
-    #     self.loginLayout.addWidget(self.loginInfo)
-    #     #self.loginWidget.setLayout(self.loginLayout)
-    #     self.__appname__ = "labelImg, your name is: " + self.name
-    #     self.setWindowTitle(self.__appname__)
-    #     self.login.setFloating(False)
 
     def findFolder(self):  ## -modifypoint-
         """
@@ -725,13 +700,13 @@ class MainWindow(QMainWindow, WindowMixin):
             else (self.actions.createMode, self.actions.editMode)
         addActions(self.menus.edit, actions + self.actions.editMenu)
 
-    def setBeginner(self):
-        self.tools.clear()
-        addActions(self.tools, self.actions.beginner)
+    # def setBeginner(self):
+    #     self.tools.clear()
+    #     addActions(self.tools, self.actions.beginner)
 
-    def setAdvanced(self):
-        self.tools.clear()
-        addActions(self.tools, self.actions.advanced)
+    # def setAdvanced(self):
+    #     self.tools.clear()
+    #     addActions(self.tools, self.actions.advanced)
 
     def setDirty(self):
         self.dirty = True
@@ -970,6 +945,7 @@ class MainWindow(QMainWindow, WindowMixin):
         self.canvas.loadShapes(s)
 
     def saveLabels(self, annotationFilePath):
+        self.numLabeled += 1
         annotationFilePath = ustr(annotationFilePath)
         # this is a path to the image.
 
@@ -1020,8 +996,6 @@ class MainWindow(QMainWindow, WindowMixin):
             self._noSelectionSlot = True
             self.canvas.selectShape(self.itemsToShapes[item])
             shape = self.itemsToShapes[item]
-            # Add Chris
-            # self.diffcButton.setChecked(shape.difficult)
 
     def labelItemChanged(self, item):
         shape = self.itemsToShapes[item]
@@ -1054,8 +1028,6 @@ class MainWindow(QMainWindow, WindowMixin):
         else:
             text = self.defaultLabelTextLine.text()
 
-        # Add Chris
-        # self.diffcButton.setChecked(False)
         if text is not None:
             self.prevLabelText = text
             generate_color = generateColorByText(text)
@@ -1186,15 +1158,8 @@ class MainWindow(QMainWindow, WindowMixin):
 
         # Label txt file and show bound box according to its filename
 
-        # if self.usingPascalVocFormat is True:
-        # if self.defaultLabelDir is not None:
         basename = os.path.basename(os.path.splitext(self.filePath)[0])
         txtPath = os.path.join(self.defaultLabelDir, basename + TXT_EXT)
-        # self.loadYOLOTXTByFilename(txtPath)
-        # else:
-        #     # should not reach this block since we set a defaultLabelDir
-        #     txtPath = os.path.splitext(filePath)[0] + TXT_EXT
-        #     self.loadYOLOTXTByFilename(txtPath)
 
         self.setWindowTitle(__appname__ + ' ' + filePath)
 
@@ -1338,9 +1303,19 @@ class MainWindow(QMainWindow, WindowMixin):
         w = self.centralWidget().width() - 2.0
         return w / self.canvas.pixmap.width()
 
+    def bookmark(self):
+        """send a text file to the server, containing the number of images already labeled."""
+
     def closeEvent(self, event):
         if not self.mayContinue():
             event.ignore()
+
+        # bookmark existing image and upload the information to the server. new
+        # uploads will override existing files.
+        data = {'numLabeled': str(self.numLabeled)}
+        bookmarkPutResponse = requests.put(self.bookmarkPath, json=data)
+
+        # save setting params
         settings = self.settings
         # If it loads images from dir, don't load it at the begining
         if self.dirname is None:
@@ -1355,6 +1330,7 @@ class MainWindow(QMainWindow, WindowMixin):
         settings[SETTING_FILL_COLOR] = self.fillColor
         settings[SETTING_RECENT_FILES] = self.recentFiles
         settings[SETTING_ADVANCE_MODE] = not self._beginner
+
         #commented out below line since we cant check if it exists locally (its a web url)
         # if self.defaultSaveDir and os.path.exists(self.defaultSaveDir):
         # if self.defaultSaveDir is not None:
@@ -1362,10 +1338,11 @@ class MainWindow(QMainWindow, WindowMixin):
         # else:
         #     settings[SETTING_SAVE_DIR] = ''
 
-        if self.lastOpenDir and os.path.exists(self.lastOpenDir):
-            settings[SETTING_LAST_OPEN_DIR] = self.lastOpenDir
-        else:
-            settings[SETTING_LAST_OPEN_DIR] = ''
+        # we never actually use SETTING_LAST_OPEN_DIR
+        # if self.lastOpenDir and os.path.exists(self.lastOpenDir):
+        #     settings[SETTING_LAST_OPEN_DIR] = self.lastOpenDir
+        # else:
+        #     settings[SETTING_LAST_OPEN_DIR] = ''
 
         settings[SETTING_AUTO_SAVE] = self.autoSaving.isChecked()
         settings[SETTING_SINGLE_CLASS] = self.singleClassMode.isChecked()
@@ -1454,19 +1431,19 @@ class MainWindow(QMainWindow, WindowMixin):
 
     #     self.importDirImages(targetDirPath)
 
-    def importDirImages(self, dirpath):
-        if not self.mayContinue() or not dirpath:
-            return
+    # def importDirImages(self, dirpath):
+    #     if not self.mayContinue() or not dirpath:
+    #         return
 
-        self.lastOpenDir = dirpath
-        self.dirname = dirpath
-        self.filePath = None
-        self.fileListWidget.clear()
-        self.mImgList = self.scanAllImages(dirpath)
-        self.openNextImg()
-        for imgPath in self.mImgList:
-            item = QListWidgetItem(imgPath)
-            self.fileListWidget.addItem(item)
+    #     self.lastOpenDir = dirpath
+    #     self.dirname = dirpath
+    #     self.filePath = None
+    #     self.fileListWidget.clear()
+    #     self.mImgList = self.scanAllImages(dirpath)
+    #     self.openNextImg()
+    #     for imgPath in self.mImgList:
+    #         item = QListWidgetItem(imgPath)
+    #         self.fileListWidget.addItem(item)
 
     # def verifyImg(self, _value=False):
     #     # Proceding next image without dialog if having any label
@@ -1516,14 +1493,15 @@ class MainWindow(QMainWindow, WindowMixin):
 
     def openNextImg(self, _value=False):
         # Proceding prev image without dialog if having any label
-        if self.autoSaving.isChecked():
-            # if self.defaultSaveDir is not None:
-            if self.dirty is True:
-                self.saveFile()
-            else:
-                # self.changeSavedirDialog()
-                print('error, we shouldnt get here, clean this up later')
-                return
+        # if self.autoSaving.isChecked():
+        # if self.defaultSaveDir is not None:
+        # if self.dirty is True:
+        # print('dirty', self.dirty)
+        # self.saveFile()
+        # else:
+        #     # self.changeSavedirDialog()
+        #     print('error, we shouldnt get here, clean this up later')
+        #     return
 
         if not self.mayContinue():
             return
@@ -1542,56 +1520,19 @@ class MainWindow(QMainWindow, WindowMixin):
         if filename:
             self.loadFile(filename)
 
-    def openFirst(self, _value=False):
-        """opens the first unannotated image."""
-        if not self.mayContinue():
-            return
-        """
-        path = os.path.dirname(ustr(self.filePath)) if self.filePath else '.'
-        formats = [
-            '*.%s' % fmt.data().decode("ascii").lower()
-            for fmt in QImageReader.supportedImageFormats()
-        ]
-        filters = "Image & Label files (%s)" % ' '.join(
-            formats + ['*%s' % LabelFile.suffix])
-        filename = QFileDialog.getOpenFileName(
-            self, '%s - Choose Image or Label file' % __appname__, path,
-            filters)
-        """
-        filename = self.mImgList[0]
-        if filename:
-            if isinstance(filename, (tuple, list)):
-                filename = filename[0]
-            self.loadFile(filename)
-
     def saveFile(self, _value=False):
-        # if self.defaultSaveDir is not None and len(ustr(self.defaultSaveDir)):
-        if self.filePath:
-            imgFileName = os.path.basename(self.filePath)
-            savedFileName = os.path.splitext(imgFileName)[0]
-            savedPath = os.path.join(ustr(self.defaultLabelDir), savedFileName)
-            self._saveFile(savedPath)
-            self.openNextImg()
-
-        # else:
-        #     #should never reach here
-        #     imgFileDir = os.path.dirname(self.filePath)
-        #     imgFileName = os.path.basename(self.filePath)
-        #     savedFileName = os.path.splitext(imgFileName)[0]
-        #     savedPath = os.path.join(imgFileDir, savedFileName)
-        #     self._saveFile(savedPath if self.labelFile else self.
-        #                    saveFileDialog(removeExt=False))
+        imgFileName = os.path.basename(self.filePath)
+        savedFileName = os.path.splitext(imgFileName)[0]
+        savedPath = os.path.join(ustr(self.defaultLabelDir), savedFileName)
+        self._saveFile(savedPath)
+        self.openNextImg()
 
     def saveFileAs(self, _value=False):
         assert not self.image.isNull(), "cannot save empty image"
-        # self._saveFile(self.saveFileDialog())
-        # self.saveFileDialog() returns a path; we just want to save it to the
-        # web server.
-        if self.filePath:
-            imgFileName = os.path.basename(self.filePath)
-            savedFileName = os.path.splitext(imgFileName)[0]
-            savedPath = os.path.join(ustr(self.defaultLabelDir), savedFileName)
-            self._saveFile(savedPath)
+        imgFileName = os.path.basename(self.filePath)
+        savedFileName = os.path.splitext(imgFileName)[0]
+        savedPath = os.path.join(ustr(self.defaultLabelDir), savedFileName)
+        self._saveFile(savedPath)
 
     def _saveFile(self, annotationFilePath):
         # (annotationFilePath is self.filePath passed in. this is an img file path.)
