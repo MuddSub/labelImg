@@ -516,7 +516,8 @@ class MainWindow(QMainWindow, WindowMixin):
             advancedContext=(createMode, editMode, edit, copy, delete,
                              shapeLineColor, shapeFillColor),
             onLoadActive=(close, create, createMode, editMode),
-            onShapesPresent=(saveAs, hideAll, showAll))
+            onShapesPresent=(save, saveAs, hideAll, showAll),
+            onShapesAbsent=(saveEmpty, ))
 
         self.menus = struct(file=self.menu('&File'),
                             edit=self.menu('&Edit'),
@@ -905,6 +906,8 @@ class MainWindow(QMainWindow, WindowMixin):
         self.labelList.addItem(item)
         for action in self.actions.onShapesPresent:
             action.setEnabled(True)
+        for action in self.actions.onShapesAbsent:
+            action.setEnabled(False)
 
     def remLabel(self, shape):
         if shape is None:
@@ -987,9 +990,10 @@ class MainWindow(QMainWindow, WindowMixin):
             return False
 
     def copySelectedShape(self):
-        self.addLabel(self.canvas.copySelectedShape())
-        # fix copy and delete
-        self.shapeSelectionChanged(True)
+        if not self.noShapes():
+            self.addLabel(self.canvas.copySelectedShape())
+            # fix copy and delete
+            self.shapeSelectionChanged(True)
 
     def labelSelectionChanged(self):
         item = self.currentItem()
@@ -1142,20 +1146,25 @@ class MainWindow(QMainWindow, WindowMixin):
         self.image.loadFromData(requests.get(filePath).content)
 
         self.labelFile = None
-        self.canvas.verified = False
+        # self.canvas.verified = False
 
         self.status("Loaded url %s" % filePath)
 
         self.filePath = filePath
         self.canvas.loadPixmap(QPixmap.fromImage(self.image))
-        if self.labelFile:
-            self.loadLabels(self.labelFile.shapes)
+        # if self.labelFile:
+        #     self.loadLabels(self.labelFile.shapes)
         self.setClean()
         self.canvas.setEnabled(True)
         self.adjustScale(initial=True)
         self.paintCanvas()
         self.addRecentFile(self.filePath)
         self.toggleActions(True)
+        if self.noShapes():
+            for action in self.actions.onShapesPresent:
+                action.setEnabled(False)
+            for action in self.actions.onShapesAbsent:
+                action.setEnabled(True)
 
         # Label txt file and show bound box according to its filename
 
@@ -1589,6 +1598,11 @@ class MainWindow(QMainWindow, WindowMixin):
         if self.noShapes():
             for action in self.actions.onShapesPresent:
                 action.setEnabled(False)
+            for action in self.actions.onShapesAbsent:
+                action.setEnabled(True)
+            for action in self.actions.editMenu:
+                if action is not None:
+                    action.setEnabled(False)
 
     def chshapeLineColor(self):
         color = self.colorDialog.getColor(self.lineColor,
