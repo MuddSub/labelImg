@@ -1,4 +1,3 @@
-
 try:
     from PyQt5.QtGui import *
     from PyQt5.QtCore import *
@@ -108,8 +107,8 @@ class Canvas(QWidget):
         # Update coordinates in status bar if image is opened
         window = self.parent().window()
         if window.filePath is not None:
-            self.parent().window().labelCoordinates.setText(
-                'X: %d; Y: %d' % (pos.x(), pos.y()))
+            self.parent().window().labelCoordinates.setText('X: %d; Y: %d' %
+                                                            (pos.x(), pos.y()))
 
         # Polygon drawing.
         if self.drawing():
@@ -120,7 +119,8 @@ class Canvas(QWidget):
                     # Don't allow the user to draw outside the pixmap.
                     # Project the point to the pixmap's edges.
                     pos = self.intersectionPoint(self.current[-1], pos)
-                elif len(self.current) > 1 and self.closeEnough(pos, self.current[0]):
+                elif len(self.current) > 1 and self.closeEnough(
+                        pos, self.current[0]):
                     # Attract line to starting point and colorise to alert the
                     # user:
                     pos = self.current[0]
@@ -135,7 +135,8 @@ class Canvas(QWidget):
                     min_size = min(abs(pos.x() - minX), abs(pos.y() - minY))
                     directionX = -1 if pos.x() - minX < 0 else 1
                     directionY = -1 if pos.y() - minY < 0 else 1
-                    self.line[1] = QPointF(minX + directionX * min_size, minY + directionY * min_size)
+                    self.line[1] = QPointF(minX + directionX * min_size,
+                                           minY + directionY * min_size)
                 else:
                     self.line[1] = pos
 
@@ -194,8 +195,8 @@ class Canvas(QWidget):
                 if self.selectedVertex():
                     self.hShape.highlightClear()
                 self.hVertex, self.hShape = None, shape
-                self.setToolTip(
-                    "Click & drag to move shape '%s'" % shape.label)
+                self.setToolTip("Click & drag to move shape '%s'" %
+                                shape.label)
                 self.setStatusTip(self.toolTip())
                 self.overrideCursor(CURSOR_GRAB)
                 self.update()
@@ -331,7 +332,8 @@ class Canvas(QWidget):
         Moves a point x,y to within the boundaries of the canvas.
         :return: (x,y,snapped) where snapped is True if x or y were changed, False if not.
         """
-        if x < 0 or x > self.pixmap.width() or y < 0 or y > self.pixmap.height():
+        if x < 0 or x > self.pixmap.width() or y < 0 or y > self.pixmap.height(
+        ):
             x = max(x, 0)
             y = max(y, 0)
             x = min(x, self.pixmap.width())
@@ -350,11 +352,13 @@ class Canvas(QWidget):
             opposite_point_index = (index + 2) % 4
             opposite_point = shape[opposite_point_index]
 
-            min_size = min(abs(pos.x() - opposite_point.x()), abs(pos.y() - opposite_point.y()))
+            min_size = min(abs(pos.x() - opposite_point.x()),
+                           abs(pos.y() - opposite_point.y()))
             directionX = -1 if pos.x() - opposite_point.x() < 0 else 1
             directionY = -1 if pos.y() - opposite_point.y() < 0 else 1
-            shiftPos = QPointF(opposite_point.x() + directionX * min_size - point.x(),
-                               opposite_point.y() + directionY * min_size - point.y())
+            shiftPos = QPointF(
+                opposite_point.x() + directionX * min_size - point.x(),
+                opposite_point.y() + directionY * min_size - point.y())
         else:
             shiftPos = pos - point
 
@@ -381,8 +385,10 @@ class Canvas(QWidget):
             pos -= QPointF(min(0, o1.x()), min(0, o1.y()))
         o2 = pos + self.offsets[1]
         if self.outOfPixmap(o2):
-            pos += QPointF(min(0, self.pixmap.width() - o2.x()),
-                           min(0, self.pixmap.height() - o2.y()))
+            pos += QPointF(min(0,
+                               self.pixmap.width() - o2.x()),
+                           min(0,
+                               self.pixmap.height() - o2.y()))
         # The next line tracks the new position of the cursor
         # relative to the shape, but also results in making it
         # a bit "shaky" when nearing the border and allows it to
@@ -447,7 +453,8 @@ class Canvas(QWidget):
         p.drawPixmap(0, 0, self.pixmap)
         Shape.scale = self.scale
         for shape in self.shapes:
-            if (shape.selected or not self._hideBackround) and self.isVisible(shape):
+            if (shape.selected
+                    or not self._hideBackround) and self.isVisible(shape):
                 shape.fill = shape.selected or shape == self.hShape
                 shape.paint(p)
         if self.current:
@@ -463,14 +470,20 @@ class Canvas(QWidget):
             rectWidth = rightBottom.x() - leftTop.x()
             rectHeight = rightBottom.y() - leftTop.y()
             p.setPen(self.drawingRectColor)
-            brush = QBrush(Qt.BDiagPattern)
+
+            # remove hatch lines, which makes precise labeling difficult
+            # brush = QBrush(Qt.BDiagPattern)
+            brush = QBrush(Qt.NoBrush)
             p.setBrush(brush)
             p.drawRect(leftTop.x(), leftTop.y(), rectWidth, rectHeight)
 
-        if self.drawing() and not self.prevPoint.isNull() and not self.outOfPixmap(self.prevPoint):
+        if self.drawing() and not self.prevPoint.isNull(
+        ) and not self.outOfPixmap(self.prevPoint):
             p.setPen(QColor(0, 0, 0))
-            p.drawLine(self.prevPoint.x(), 0, self.prevPoint.x(), self.pixmap.height())
-            p.drawLine(0, self.prevPoint.y(), self.pixmap.width(), self.prevPoint.y())
+            p.drawLine(self.prevPoint.x(), 0, self.prevPoint.x(),
+                       self.pixmap.height())
+            p.drawLine(0, self.prevPoint.y(), self.pixmap.width(),
+                       self.prevPoint.y())
 
         self.setAutoFillBackground(True)
         if self.verified:
@@ -527,9 +540,7 @@ class Canvas(QWidget):
         # and find the one intersecting the current line segment.
         # http://paulbourke.net/geometry/lineline2d/
         size = self.pixmap.size()
-        points = [(0, 0),
-                  (size.width(), 0),
-                  (size.width(), size.height()),
+        points = [(0, 0), (size.width(), 0), (size.width(), size.height()),
                   (0, size.height())]
         x1, y1 = p1.x(), p1.y()
         x2, y2 = p2.x(), p2.y()
@@ -654,10 +665,12 @@ class Canvas(QWidget):
         self.repaint()
 
     def moveOutOfBound(self, step):
-        points = [p1+p2 for p1, p2 in zip(self.selectedShape.points, [step]*4)]
+        points = [
+            p1 + p2 for p1, p2 in zip(self.selectedShape.points, [step] * 4)
+        ]
         return True in map(self.outOfPixmap, points)
 
-    def setLastLabel(self, text, line_color  = None, fill_color = None):
+    def setLastLabel(self, text, line_color=None, fill_color=None):
         assert text
         self.shapes[-1].label = text
         if line_color:
