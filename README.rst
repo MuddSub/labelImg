@@ -41,16 +41,6 @@ Linux/Ubuntu/Mac requires at least `Python
 
 Ubuntu Linux
 ^^^^^^^^^^^^
-Python 2 + Qt4
-
-.. code:: shell
-
-    sudo apt-get install pyqt4-dev-tools
-    sudo pip install lxml
-    make qt4py2
-    python labelImg.py
-    python labelImg.py [IMAGE_PATH] [PRE-DEFINED CLASS FILE]
-
 Python 3 + Qt5 (Recommended)
 
 .. code:: shell
@@ -59,19 +49,40 @@ Python 3 + Qt5 (Recommended)
     sudo pip3 install -r requirements/requirements-linux-python3.txt
     make qt5py3
     python3 labelImg.py
-    python3 labelImg.py [IMAGE_PATH] [PRE-DEFINED CLASS FILE]
 
-macOS
-^^^^^
 Python 2 + Qt4
 
 .. code:: shell
 
-    brew install qt qt4
-    brew install libxml2
+    sudo apt-get install pyqt4-dev-tools
+    sudo pip install lxml
     make qt4py2
     python labelImg.py
-    python labelImg.py [IMAGE_PATH] [PRE-DEFINED CLASS FILE]
+
+
+macOS
+^^^^^
+Python 3 Virtualenv (Recommended - this should be the easiest method)
+
+Virtualenv can avoid a lot of the QT / Python version issues
+
+cd into the project directory
+
+.. code:: shell
+
+    brew install python3
+    pip3 install pipenv
+    pip install virtualenv
+    virtualenv venv
+    source venv/bin/activate
+
+    pip install -r requirements.txt
+    make qt5py3
+    python3 labelImg.py
+    [Optional] rm -rf build dist; python setup.py py2app -A;mv "dist/labelImg.app" /Applications
+
+Note: The Last command gives you a nice .app file with a new SVG Icon in your /Applications folder. You can consider using the script: build-tools/build-for-macos.sh
+
 
 Python 3 + Qt5 (Recommended)
 
@@ -86,28 +97,32 @@ Python 3 + Qt5 (Recommended)
 
     make qt5py3
     python3 labelImg.py
-    python3 labelImg.py [IMAGE_PATH] [PRE-DEFINED CLASS FILE]
+
+(^this method may create some issues that should be resolved by following these instructions: https://stackoverflow.com/questions/46986431/make-no-rule-to-make-target-qt5py3-stop/46991934)
 
 
-Python 3 Virtualenv (Recommended)
-
-Virtualenv can avoid a lot of the QT / Python version issues
-
-cd into the project directory
+Python 2 + Qt4
 
 .. code:: shell
 
-    brew install python3
-    pip3 install pipenv
-    pip install virtualenv
-    virtualenv venv
-    source venv/bin/activate
-    pip install -r requirements.txt #includes boto3 and requests
-    make qt5py3
-    python3 labelImg.py
-    [Optional] rm -rf build dist; python setup.py py2app -A;mv "dist/labelImg.app" /Applications
+    brew install qt qt4
+    brew install libxml2
+    make qt4py2
+    python labelImg.py
 
-Note: The Last command gives you a nice .app file with a new SVG Icon in your /Applications folder. You can consider using the script: build-tools/build-for-macos.sh
+
+Windows + Anaconda
+^^^^^^^^^^^^^^^^^^
+
+Download and install `Anaconda <https://www.anaconda.com/download/#download>`__ (Python 3+)
+
+Open the Anaconda Prompt and go to the `labelImg <#labelimg>`__ directory
+
+.. code:: shell
+
+    conda install pyqt=5
+    pyrcc5 -o libs/resources.py resources.qrc
+    python labelImg.py
 
 
 
@@ -122,36 +137,18 @@ Open cmd and go to the `labelImg <#labelimg>`__ directory
 
 .. code:: shell
 
-    pyrcc4 -o line/resources.py resources.qrc
-    For pyqt5, pyrcc5 -o libs/resources.py resources.qrc
-    
-    python labelImg.py
-    python labelImg.py [IMAGE_PATH] [PRE-DEFINED CLASS FILE]
-
-Windows + Anaconda
-^^^^^^^^^^^^^^^^^^
-
-Download and install `Anaconda <https://www.anaconda.com/download/#download>`__ (Python 3+)
-
-Open the Anaconda Prompt and go to the `labelImg <#labelimg>`__ directory
-
-.. code:: shell
-
-    conda install pyqt=5
+    # if you have pyqt5
     pyrcc5 -o libs/resources.py resources.qrc
+
+    # if you have pyqt4
+    pyrcc4 -o line/resources.py resources.qrc
+    
+    # then both run 
     python labelImg.py
-    python labelImg.py [IMAGE_PATH] [PRE-DEFINED CLASS FILE]
-
-Get from PyPI but only python3.0 or above
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-.. code:: shell
-
-    pip3 install labelImg
-    labelImg
-    labelImg [IMAGE_PATH] [PRE-DEFINED CLASS FILE]
 
 
-Use Docker
+
+Use Docker (not recommended - we haven't tested/edited these commands)
 ~~~~~~~~~~~~~~~~~
 .. code:: shell
 
