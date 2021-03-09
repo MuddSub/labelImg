@@ -170,7 +170,8 @@ class MainWindow(QMainWindow, WindowMixin):
         self.numLabeled = 0
         if bookmarkResponse.status_code == 200:
             bookmarkText = bookmarkResponse.text
-            self.numLabeled = int(bookmarkText)
+            if bookmarkText != '':
+                self.numLabeled = int(bookmarkText)
 
         # populate self.mImgList with the urls of all the unlabeled images
         imgNames = re.findall(pattern, responseText)
