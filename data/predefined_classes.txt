@@ -4,3 +4,4 @@ gate
 path marker
 torpedo board
 torpedo target
+gripper object
