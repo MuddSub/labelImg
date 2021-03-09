@@ -266,6 +266,7 @@ class Canvas(QWidget):
 
     def handleDrawing(self, pos):
         if self.current and self.current.reachMaxPoints() is False:
+            # mouse released - i.e. finish drawing box
             initPos = self.current[0]
             minX = initPos.x()
             minY = initPos.y()
@@ -277,6 +278,7 @@ class Canvas(QWidget):
             self.current.addPoint(QPointF(minX, maxY))
             self.finalise()
         elif not self.outOfPixmap(pos):
+            # mouse pressed down - i.e. start to draw box
             self.current = Shape()
             self.current.addPoint(pos)
             self.line.points = [pos, pos]

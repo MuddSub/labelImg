@@ -1,7 +1,6 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 
-
 try:
     from PyQt5.QtGui import *
     from PyQt5.QtCore import *
@@ -15,7 +14,7 @@ import sys
 DEFAULT_LINE_COLOR = QColor(0, 255, 0, 128)
 DEFAULT_FILL_COLOR = QColor(255, 0, 0, 128)
 DEFAULT_SELECT_LINE_COLOR = QColor(255, 255, 255)
-DEFAULT_SELECT_FILL_COLOR = QColor(0, 128, 255, 155)
+DEFAULT_SELECT_FILL_COLOR = QColor(255, 255, 0, 0)
 DEFAULT_VERTEX_FILL_COLOR = QColor(0, 255, 0, 255)
 DEFAULT_HVERTEX_FILL_COLOR = QColor(255, 0, 0)
 MIN_Y_LABEL = 10
@@ -38,7 +37,11 @@ class Shape(object):
     point_size = 8
     scale = 1.0
 
-    def __init__(self, label=None, line_color=None, difficult=False, paintLabel=False):
+    def __init__(self,
+                 label=None,
+                 line_color=None,
+                 difficult=False,
+                 paintLabel=False):
         self.label = label
         self.points = []
         self.fill = False
@@ -123,9 +126,9 @@ class Shape(object):
                     font.setPointSize(8)
                     font.setBold(True)
                     painter.setFont(font)
-                    if(self.label == None):
+                    if (self.label == None):
                         self.label = ""
-                    if(min_y < MIN_Y_LABEL):
+                    if (min_y < MIN_Y_LABEL):
                         min_y += MIN_Y_LABEL
                     painter.drawText(min_x, min_y, self.label)
 
