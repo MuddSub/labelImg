@@ -1191,7 +1191,7 @@ class MainWindow(QMainWindow, WindowMixin):
 
         # self.setWindowTitle(__appname__ + ' ' + filePath)
         self.setWindowTitle(
-            '%d / %d images labeled; you are on your %dth image' %
+            '%d / %d images labeled; you are on image %d' %
             (self.numLabeled, len(
                 self.imgNames), min(self.numLabeled + 1, len(self.imgNames))))
 
