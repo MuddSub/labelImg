@@ -82,13 +82,17 @@ class Login(QDialog):
         if (self.nameTextbox.text() != '' and self.name in self.authNames):
             self.accept()
         else:
-            QtWidgets.QMessageBox.warning(self, 'Error',
-                                          'Bad user or password')
+            QMessageBox.warning(self, 'Error', 'Bad user or password')
 
     def getNames(self):
         namesPath = baseServerUrl + 'names.txt'
+        adminNamesPath = baseServerUrl + 'admin_names.txt'
         namesResponse = requests.get(namesPath)
-        nameList = namesResponse.content.decode().strip('\n').split('\n')
+        nameList = namesResponse.content.decode().strip('\n').replace(
+            '\r', '').split('\n')
+        adminNamesResponse = requests.get(adminNamesPath)
+        nameList += adminNamesResponse.content.decode().strip('\n').replace(
+            '\r', '').split('\n')
         return nameList
 
 
@@ -158,11 +162,6 @@ class MainWindow(QMainWindow, WindowMixin):
         # e.g. self.defaultImgDir = '.../compData/erchen-halu'
         # self.defaultLabelDir = '.../compData/erchen-halu/erchen'
 
-        # get a list of all the images (urls) in the imagefolder
-        response = requests.get(self.defaultImgDir)
-        responseText = response.text
-        pattern = '<a href=".*?\.(?:png|jpg|jpeg)">(.*?)</a>'
-
         # if 'bookmark.txt' exists in the labeltext directory, the update the
         # number of images already labeled
         self.bookmarkPath = self.defaultLabelDir + 'bookmark.txt'
@@ -172,6 +171,11 @@ class MainWindow(QMainWindow, WindowMixin):
             bookmarkText = bookmarkResponse.text
             if bookmarkText != '':
                 self.numLabeled = int(bookmarkText)
+
+        # get a list of all the images (urls) in the imagefolder
+        response = requests.get(self.defaultImgDir)
+        responseText = response.text
+        pattern = '<a href=".*?\.(?:png|jpg|jpeg)">(.*?)</a>'
 
         # populate self.mImgList with the urls of all the unlabeled images
         imgNames = re.findall(pattern, responseText)
@@ -666,7 +670,13 @@ class MainWindow(QMainWindow, WindowMixin):
         responseText = response.text
         pattern = '<a href=".*?(?:/)">(.*?)</a>'
         for foldername in re.findall(pattern, responseText):
-            if foldername[:len(self.name)] == self.name:
+            if self.name.startswith('admin') and foldername == 'admin/':
+                adminResponseText = requests.get(compDataUrl + foldername).text
+                if self.name + '/' in re.findall(pattern, adminResponseText):
+                    return foldername + self.name + '/'
+                else:
+                    print('error with admin folder structure.')
+            elif foldername[:len(self.name)] == self.name:
                 return foldername
             elif foldername[:len(foldername) - 1].endswith(self.name):
                 return foldername
