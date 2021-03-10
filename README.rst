@@ -39,14 +39,26 @@ Linux/Ubuntu/Mac requires at least `Python
 3 or above <https://www.python.org/getit/>`__ and  `PyQt5 <https://pypi.org/project/PyQt5/>`__ are strongly recommended.
 
 
+First, clone this repository and cd into it. 
+
+.. code:: shell
+
+    git clone https://github.com/MuddSub/labelImg
+    cd labelImg
+
+Then follow the additional instructions based on your OS. 
+
+
 Ubuntu Linux
 ^^^^^^^^^^^^
 Python 3 + Qt5 (Recommended)
 
+(We recommend creating a virtual environment and then running the following commands - however, we have not tested it yet.) 
+
 .. code:: shell
 
     sudo apt-get install pyqt5-dev-tools
-    sudo pip3 install -r requirements/requirements-linux-python3.txt
+    pip3 install -r requirements.txt
     make qt5py3
     python3 labelImg.py
 
@@ -55,7 +67,7 @@ Python 2 + Qt4
 .. code:: shell
 
     sudo apt-get install pyqt4-dev-tools
-    sudo pip install lxml
+    pip install lxml
     make qt4py2
     python labelImg.py
 
@@ -70,18 +82,23 @@ cd into the project directory
 
 .. code:: shell
 
-    brew install python3
-    pip3 install pipenv
-    pip install virtualenv
+    pip3 install virtualenv
     virtualenv venv
     source venv/bin/activate
 
-    pip install -r requirements.txt
+    pip3 install -r requirements.txt
     make qt5py3
     python3 labelImg.py
     [Optional] rm -rf build dist; python setup.py py2app -A;mv "dist/labelImg.app" /Applications
 
 Note: The Last command gives you a nice .app file with a new SVG Icon in your /Applications folder. You can consider using the script: build-tools/build-for-macos.sh
+
+If you get an error saying that you're missing xcrun when you make qt5py3, try running the following command and then continue the setup where you left off: 
+
+.. code:: shell
+
+    xcode-select --install
+
 
 
 Python 3 + Qt5 (Recommended)
