@@ -9,6 +9,7 @@ SERVER_PORT = '8080'
 baseServerUrl = SERVER_IP + ':' + SERVER_PORT + '/'
 # baseLabelFolderUrl = baseServerUrl + 'labels/'
 compDataUrl = baseServerUrl + 'compData/'
+closingImgUrl = compDataUrl + 'closingImg.png'
 ####################################
 
 SETTING_FILENAME = 'filename'

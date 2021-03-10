@@ -146,50 +146,6 @@ class MainWindow(QMainWindow, WindowMixin):
         self.labelHist = []
         self.lastOpenDir = None
 
-        #################################### - modifypoint -####################
-        # get the image folder and label folder urls based on the users name,
-        # then load the first image.
-        ########################################################################
-        self.name = name
-        self.sharedFolderName = self.findFolder()
-
-        # replace defaultSaveDir with defaultImgDir and defaultLabelDir:
-        if self.sharedFolderName is not None and len(self.sharedFolderName):
-            self.defaultImgDir = compDataUrl + self.sharedFolderName
-        else:
-            self.defaultImgDir = compDataUrl
-        self.defaultLabelDir = self.defaultImgDir + self.name + '/'
-        # e.g. self.defaultImgDir = '.../compData/erchen-halu'
-        # self.defaultLabelDir = '.../compData/erchen-halu/erchen'
-
-        # if 'bookmark.txt' exists in the labeltext directory, the update the
-        # number of images already labeled
-        self.bookmarkPath = self.defaultLabelDir + 'bookmark.txt'
-        bookmarkResponse = requests.get(self.bookmarkPath)
-        self.numLabeled = 0
-        if bookmarkResponse.status_code == 200:
-            bookmarkText = bookmarkResponse.text
-            if bookmarkText != '':
-                self.numLabeled = int(bookmarkText)
-
-        # get a list of all the images (urls) in the imagefolder
-        response = requests.get(self.defaultImgDir)
-        responseText = response.text
-        pattern = '<a href=".*?\.(?:png|jpg|jpeg)">(.*?)</a>'
-
-        # populate self.mImgList with the urls of all the unlabeled images
-        imgNames = re.findall(pattern, responseText)
-        for i in range(self.numLabeled, len(imgNames)):
-            imgPath = self.defaultImgDir + imgNames[i]
-            self.mImgList.append(imgPath)
-
-        # set default image to the first image in the list of images, then open
-        # it as a background process
-        self.filePath = self.mImgList[0]
-        self.queueEvent(partial(self.loadFile, self.filePath))
-
-        ################################################################
-
         # Whether we need to save or not.
         self.dirty = False
 
@@ -245,17 +201,17 @@ class MainWindow(QMainWindow, WindowMixin):
         self.dock.setObjectName(getStr('labels'))
         self.dock.setWidget(labelListContainer)
 
-        self.fileListWidget = QListWidget()
-        self.fileListWidget.itemDoubleClicked.connect(
-            self.fileitemDoubleClicked)
-        filelistLayout = QVBoxLayout()
-        filelistLayout.setContentsMargins(0, 0, 0, 0)
-        filelistLayout.addWidget(self.fileListWidget)
-        fileListContainer = QWidget()
-        fileListContainer.setLayout(filelistLayout)
-        self.filedock = QDockWidget(getStr('fileList'), self)
-        self.filedock.setObjectName(getStr('files'))
-        self.filedock.setWidget(fileListContainer)
+        # self.fileListWidget = QListWidget()
+        # self.fileListWidget.itemDoubleClicked.connect(
+        #     self.fileitemDoubleClicked)
+        # filelistLayout = QVBoxLayout()
+        # filelistLayout.setContentsMargins(0, 0, 0, 0)
+        # filelistLayout.addWidget(self.fileListWidget)
+        # fileListContainer = QWidget()
+        # fileListContainer.setLayout(filelistLayout)
+        # self.filedock = QDockWidget(getStr('fileList'), self)
+        # self.filedock.setObjectName(getStr('files'))
+        # self.filedock.setWidget(fileListContainer)
 
         self.zoomWidget = ZoomWidget()
         self.colorDialog = ColorDialog(parent=self)
@@ -282,8 +238,8 @@ class MainWindow(QMainWindow, WindowMixin):
 
         self.setCentralWidget(scroll)
         self.addDockWidget(Qt.RightDockWidgetArea, self.dock)
-        self.addDockWidget(Qt.RightDockWidgetArea, self.filedock)
-        self.filedock.setFeatures(QDockWidget.DockWidgetFloatable)
+        # self.addDockWidget(Qt.RightDockWidgetArea, self.filedock)
+        # self.filedock.setFeatures(QDockWidget.DockWidgetFloatable)
 
         self.dockFeatures = QDockWidget.DockWidgetClosable | QDockWidget.DockWidgetFloatable
         self.dock.setFeatures(self.dock.features() ^ self.dockFeatures)
@@ -329,8 +285,8 @@ class MainWindow(QMainWindow, WindowMixin):
         close = action(getStr('closeCur'), self.closeFile, 'Ctrl+W', 'close',
                        getStr('closeCurDetail'))
 
-        resetAll = action(getStr('resetAll'), self.resetAll, None, 'resetall',
-                          getStr('resetAllDetail'))
+        # resetAll = action(getStr('resetAll'), self.resetAll, None, 'resetall',
+        #                   getStr('resetAllDetail'))
 
         color1 = action(getStr('boxLineColor'), self.chooseColor1, 'Ctrl+L',
                         'color_line', getStr('boxLineColorDetail'))
@@ -491,7 +447,7 @@ class MainWindow(QMainWindow, WindowMixin):
             saveAs=saveAs,
             # open=open,
             close=close,
-            resetAll=resetAll,
+            # resetAll=resetAll,
             lineColor=color1,
             create=create,
             delete=delete,
@@ -511,7 +467,7 @@ class MainWindow(QMainWindow, WindowMixin):
             zoomActions=zoomActions,
             #   fileMenuActions=(open, opendir, save, saveAs,
             #                    close, resetAll, quit),
-            fileMenuActions=(save, saveAs, saveEmpty, close, resetAll, quit),
+            fileMenuActions=(save, saveAs, saveEmpty, close, quit),
             beginner=(),
             advanced=(),
             editMenu=(edit, copy, delete, None, color1,
@@ -521,7 +477,10 @@ class MainWindow(QMainWindow, WindowMixin):
                              shapeLineColor, shapeFillColor),
             onLoadActive=(close, create, createMode, editMode),
             onShapesPresent=(save, saveAs, hideAll, showAll),
-            onShapesAbsent=(saveEmpty, ))
+            onShapesAbsent=(saveEmpty, ),
+            disableOnCompletion=(save, saveEmpty, saveAs, create, edit, copy,
+                                 delete, createMode, editMode),
+            enableOnCompletion=(close, quit))
 
         self.menus = struct(file=self.menu('&File'),
                             edit=self.menu('&Edit'),
@@ -553,8 +512,8 @@ class MainWindow(QMainWindow, WindowMixin):
         #            (open, opendir, changeSavedir, openAnnotation,
         #             self.menus.recentFiles, save, save_format, saveAs, close,
         #             resetAll, quit))
-        addActions(self.menus.file, (self.menus.recentFiles, save, saveAs,
-                                     saveEmpty, close, resetAll, quit))
+        addActions(self.menus.file, (save, saveAs, saveEmpty, close, quit))
+        addActions(self.menus.file, (save, saveAs, saveEmpty, close, quit))
         addActions(self.menus.help, (help, showInfo))
         addActions(
             self.menus.view,
@@ -652,6 +611,54 @@ class MainWindow(QMainWindow, WindowMixin):
         # Display cursor coordinates at the right of status bar
         self.labelCoordinates = QLabel('')
         self.statusBar().addPermanentWidget(self.labelCoordinates)
+
+        #################################### - modifypoint -####################
+        # get the image folder and label folder urls based on the users name,
+        # then load the first image.
+        ########################################################################
+        self.name = name
+        self.sharedFolderName = self.findFolder()
+
+        # replace defaultSaveDir with defaultImgDir and defaultLabelDir:
+        if self.sharedFolderName is not None and len(self.sharedFolderName):
+            self.defaultImgDir = compDataUrl + self.sharedFolderName
+        else:
+            self.defaultImgDir = compDataUrl
+        self.defaultLabelDir = self.defaultImgDir + self.name + '/'
+        # e.g. self.defaultImgDir = '.../compData/erchen-halu'
+        # self.defaultLabelDir = '.../compData/erchen-halu/erchen'
+
+        # if 'bookmark.txt' exists in the labeltext directory, the update the
+        # number of images already labeled
+        self.bookmarkPath = self.defaultLabelDir + 'bookmark.txt'
+        bookmarkResponse = requests.get(self.bookmarkPath)
+        self.numLabeled = 0
+        if bookmarkResponse.status_code == 200:
+            bookmarkText = bookmarkResponse.text
+            if bookmarkText != '':
+                self.numLabeled = int(bookmarkText)
+
+        # get a list of all the images (urls) in the imagefolder
+        response = requests.get(self.defaultImgDir)
+        responseText = response.text
+        pattern = '<a href=".*?\.(?:png|jpg|jpeg)">(.*?)</a>'
+
+        # populate self.mImgList with the urls of all the unlabeled images
+        self.imgNames = re.findall(pattern, responseText)
+        for i in range(self.numLabeled, len(self.imgNames)):
+            imgPath = self.defaultImgDir + self.imgNames[i]
+            self.mImgList.append(imgPath)
+
+        # set default image to the first image in the list of images, then open
+        # it as a background process. however, if all images are labeled,
+        # simply display the closing image.
+        if len(self.imgNames) == self.numLabeled:
+            self.complete()
+        else:
+            self.filePath = self.mImgList[0]
+            self.queueEvent(partial(self.loadFile, self.filePath))
+
+        ################################################################
 
     def keyReleaseEvent(self, event):
         if event.key() == Qt.Key_Control:
@@ -853,12 +860,12 @@ class MainWindow(QMainWindow, WindowMixin):
             self.setDirty()
 
     # Tzutalin 20160906 : Add file list and dock to move faster
-    def fileitemDoubleClicked(self, item=None):
-        currIndex = self.mImgList.index(ustr(item.text()))
-        if currIndex < len(self.mImgList):
-            filename = self.mImgList[currIndex]
-            if filename:
-                self.loadFile(filename)
+    # def fileitemDoubleClicked(self, item=None):
+    #     currIndex = self.mImgList.index(ustr(item.text()))
+    #     if currIndex < len(self.mImgList):
+    #         filename = self.mImgList[currIndex]
+    #         if filename:
+    #             self.loadFile(filename)
 
     # Add chris
     def btnstate(self, item=None):
@@ -959,6 +966,7 @@ class MainWindow(QMainWindow, WindowMixin):
         self.canvas.loadShapes(s)
 
     def saveLabels(self, annotationFilePath):
+        assert self.numLabeled < len(self.imgNames)
         self.numLabeled += 1
         annotationFilePath = ustr(annotationFilePath)
         # this is a path to the image.
@@ -1191,104 +1199,6 @@ class MainWindow(QMainWindow, WindowMixin):
 
         self.canvas.setFocus(True)
         return True
-        """
-        # Make sure that filePath is a regular python string, rather than QString
-        filePath = ustr(filePath)  # converts to unicode ?
-
-        # Fix bug: An  index error after select a directory when open a new file.
-        unicodeFilePath = ustr(filePath)
-        unicodeFilePath = os.path.abspath(unicodeFilePath)
-        # Tzutalin 20160906 : Add file list and dock to move faster
-        # Highlight the file item
-        if unicodeFilePath and self.fileListWidget.count() > 0:
-            if unicodeFilePath in self.mImgList:
-                index = self.mImgList.index(unicodeFilePath)
-                fileWidgetItem = self.fileListWidget.item(index)
-                fileWidgetItem.setSelected(True)
-            else:
-                self.fileListWidget.clear()
-                self.mImgList.clear()
-
-        if unicodeFilePath and os.path.exists(unicodeFilePath):
-            if LabelFile.isLabelFile(unicodeFilePath):
-                try:
-                    self.labelFile = LabelFile(unicodeFilePath)
-                except LabelFileError as e:
-                    self.errorMessage(
-                        u'Error opening file',
-                        (u"<p><b>%s</b></p>"
-                         u"<p>Make sure <i>%s</i> is a valid label file.") %
-                        (e, unicodeFilePath))
-                    self.status("Error reading %s" % unicodeFilePath)
-                    return False
-                self.imageData = self.labelFile.imageData
-                self.lineColor = QColor(*self.labelFile.lineColor)
-                self.fillColor = QColor(*self.labelFile.fillColor)
-                self.canvas.verified = self.labelFile.verified
-            else:
-                # Load image:
-                # read data first and store for saving into label file.
-                self.imageData = read(unicodeFilePath, None)
-                self.labelFile = None
-                self.canvas.verified = False
-        
-
-            image = QImage.fromData(self.imageData)
-            if image.isNull():
-                self.errorMessage(
-                    u'Error opening file',
-                    u"<p>Make sure <i>%s</i> is a valid image file." %
-                    unicodeFilePath)
-                self.status("Error reading %s" % unicodeFilePath)
-                return False
-            self.status("Loaded %s" % os.path.basename(unicodeFilePath))
-            self.image = image
-            self.filePath = unicodeFilePath
-            self.canvas.loadPixmap(QPixmap.fromImage(image))
-            if self.labelFile:
-                self.loadLabels(self.labelFile.shapes)
-            self.setClean()
-            self.canvas.setEnabled(True)
-            self.adjustScale(initial=True)
-            self.paintCanvas()
-            self.addRecentFile(self.filePath)
-            self.toggleActions(True)
-
-            # Label xml file and show bound box according to its filename
-            # if self.usingPascalVocFormat is True:
-            if self.defaultSaveDir is not None:
-                basename = os.path.basename(os.path.splitext(self.filePath)[0])
-                xmlPath = os.path.join(self.defaultSaveDir, basename + XML_EXT)
-                txtPath = os.path.join(self.defaultSaveDir, basename + TXT_EXT)
-                # 
-                # Annotation file priority:
-                # PascalXML > YOLO
-                # 
-                if os.path.isfile(xmlPath):
-                    self.loadPascalXMLByFilename(xmlPath)
-                elif os.path.isfile(txtPath):
-                    self.loadYOLOTXTByFilename(txtPath)
-            else:
-                xmlPath = os.path.splitext(filePath)[0] + XML_EXT
-                txtPath = os.path.splitext(filePath)[0] + TXT_EXT
-                if os.path.isfile(xmlPath):
-                    self.loadPascalXMLByFilename(xmlPath)
-                elif os.path.isfile(txtPath):
-                    self.loadYOLOTXTByFilename(txtPath)
-
-            self.setWindowTitle(__appname__ + ' ' + filePath)
-
-            # Default : select last item if there is at least one item
-            if self.labelList.count():
-                self.labelList.setCurrentItem(
-                    self.labelList.item(self.labelList.count() - 1))
-                self.labelList.item(self.labelList.count() -
-                                    1).setSelected(True)
-
-            self.canvas.setFocus(True)
-            return True
-        """
-        # return False
 
     def resizeEvent(self, event):
         if self.canvas and not self.image.isNull()\
@@ -1536,6 +1446,8 @@ class MainWindow(QMainWindow, WindowMixin):
             currIndex = self.mImgList.index(self.filePath)
             if currIndex + 1 < len(self.mImgList):
                 filename = self.mImgList[currIndex + 1]
+            elif currIndex + 1 >= len(self.mImgList):
+                self.complete()
 
         if filename:
             self.loadFile(filename)
@@ -1570,11 +1482,19 @@ class MainWindow(QMainWindow, WindowMixin):
         self.canvas.setEnabled(False)
         self.actions.saveAs.setEnabled(False)
 
-    def resetAll(self):
-        self.settings.reset()
-        self.close()
-        proc = QProcess()
-        proc.startDetached(os.path.abspath(__file__))
+    def complete(self):
+        assert self.numLabeled == len(self.imgNames)
+        self.loadFile(closingImgUrl)
+        for action in self.actions.disableOnCompletion:
+            action.setEnabled(False)
+        for action in self.actions.enableOnCompletion:
+            action.setEnabled(True)
+
+    # def resetAll(self):
+    #     self.settings.reset()
+    #     self.close()
+    #     proc = QProcess()
+    #     proc.startDetached(os.path.abspath(__file__))
 
     def mayContinue(self):
         return not (self.dirty and not self.discardChangesDialog())
