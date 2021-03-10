@@ -1000,8 +1000,8 @@ class MainWindow(QMainWindow, WindowMixin):
                 self.labelFile.save(annotationFilePath, shapes, self.filePath,
                                     self.imageData, self.lineColor.getRgb(),
                                     self.fillColor.getRgb())
-            print('Image:{0} -> Annotation:{1}'.format(self.filePath,
-                                                       annotationFilePath))
+            # print('Image:{0} -> Annotation:{1}'.format(self.filePath,
+            #                                            annotationFilePath))
             return True
         except LabelFileError as e:
             self.errorMessage(u'Error saving label data', u'<b>%s</b>' % e)
@@ -1189,7 +1189,11 @@ class MainWindow(QMainWindow, WindowMixin):
         basename = os.path.basename(os.path.splitext(self.filePath)[0])
         txtPath = os.path.join(self.defaultLabelDir, basename + TXT_EXT)
 
-        self.setWindowTitle(__appname__ + ' ' + filePath)
+        # self.setWindowTitle(__appname__ + ' ' + filePath)
+        self.setWindowTitle(
+            '%d / %d images labeled; you are on your %dth image' %
+            (self.numLabeled, len(
+                self.imgNames), min(self.numLabeled + 1, len(self.imgNames))))
 
         # Default : select last item if there is at least one item
         if self.labelList.count():
@@ -1489,6 +1493,7 @@ class MainWindow(QMainWindow, WindowMixin):
             action.setEnabled(False)
         for action in self.actions.enableOnCompletion:
             action.setEnabled(True)
+        self.setWindowTitle('no more images to label!')
 
     # def resetAll(self):
     #     self.settings.reset()

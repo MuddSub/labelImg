@@ -68,8 +68,8 @@ class YOLOWriter:
         # upload to server. any new uploads will override existing file.
         r = requests.put(targetFile, json=data)
         # check status code for response recieved
-        # success code - 201: created
-        print('r', r)
+        if r.status_code != 201:
+            print('error, did not save label to server')
 
 
 class YoloReader:
