@@ -1,7 +1,7 @@
-bins
-buoys
-gate
-path marker
-torpedo board
-torpedo target
-gripper object
+bins (2019)
+buoys (2019)
+gate (2019)
+path marker (2019)
+torpedo board (2019)
+torpedo target (2019)
+gripper object (2019)
