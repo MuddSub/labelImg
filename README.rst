@@ -15,8 +15,7 @@ LabelImg is a graphical image annotation tool.
 
 It is written in Python and uses Qt for its graphical interface.
 
-Annotations are saved as XML files in PASCAL VOC format, the format used
-by `ImageNet <http://www.image-net.org/>`__.  Besides, it also supports YOLO format
+Annotations are saved as TXT files in YOLO format.
 
 .. image:: https://raw.githubusercontent.com/tzutalin/labelImg/master/demo/demo3.jpg
      :alt: Demo Image
@@ -53,11 +52,11 @@ Ubuntu Linux
 ^^^^^^^^^^^^
 Python 3 + Qt5 (Recommended)
 
-(We recommend creating a virtual environment and then running the following commands - however, we have not tested it yet.) 
+We recommend creating a virtual environment and then running the following commands
 
 .. code:: shell
 
-    sudo apt-get install pyqt5-dev-tools
+    apt-get install pyqt5-dev-tools
     pip3 install -r requirements.txt
     make qt5py3
     python3 labelImg.py
@@ -66,7 +65,7 @@ Python 2 + Qt4
 
 .. code:: shell
 
-    sudo apt-get install pyqt4-dev-tools
+    apt-get install pyqt4-dev-tools
     pip install lxml
     make qt4py2
     python labelImg.py
@@ -115,7 +114,7 @@ Python 3 + Qt5 (Recommended)
     make qt5py3
     python3 labelImg.py
 
-(^this method may create some issues that should be resolved by following these instructions: https://stackoverflow.com/questions/46986431/make-no-rule-to-make-target-qt5py3-stop/46991934)
+(If you run into problems, check to see if these instructions help: https://stackoverflow.com/questions/46986431/make-no-rule-to-make-target-qt5py3-stop/46991934)
 
 
 Python 2 + Qt4
@@ -203,11 +202,6 @@ Hotkeys
 +------------+--------------------------------------------+
 | ↑→↓←       | Keyboard arrows to move selected rect box  |
 +------------+--------------------------------------------+
-
-How to contribute
-~~~~~~~~~~~~~~~~~
-
-Send a pull request
 
 License
 ~~~~~~~
