@@ -1190,10 +1190,9 @@ class MainWindow(QMainWindow, WindowMixin):
         txtPath = os.path.join(self.defaultLabelDir, basename + TXT_EXT)
 
         # self.setWindowTitle(__appname__ + ' ' + filePath)
-        self.setWindowTitle(
-            '%d / %d images labeled; you are on image %d' %
-            (self.numLabeled, len(
-                self.imgNames), min(self.numLabeled + 1, len(self.imgNames))))
+        self.setWindowTitle('%d / %d images labeled; you are on image %d' %
+                            (self.numLabeled, len(self.imgNames),
+                             min(self.numLabeled + 1, len(self.imgNames))))
 
         # Default : select last item if there is at least one item
         if self.labelList.count():
@@ -1237,17 +1236,16 @@ class MainWindow(QMainWindow, WindowMixin):
         w = self.centralWidget().width() - 2.0
         return w / self.canvas.pixmap.width()
 
-    def bookmark(self):
+    def saveBookmark(self):
         """send a text file to the server, containing the number of images already labeled."""
+        data = {'numLabeled': str(self.numLabeled)}
+        bookmarkPutResponse = requests.put(self.bookmarkPath, json=data)
 
     def closeEvent(self, event):
         if not self.mayContinue():
             event.ignore()
 
-        # bookmark existing image and upload the information to the server. new
-        # uploads will override existing files.
-        data = {'numLabeled': str(self.numLabeled)}
-        bookmarkPutResponse = requests.put(self.bookmarkPath, json=data)
+        self.saveBookmark()
 
         # save setting params
         settings = self.settings
@@ -1476,6 +1474,7 @@ class MainWindow(QMainWindow, WindowMixin):
             self.setClean()
             self.statusBar().showMessage('Saved to  %s' % annotationFilePath)
             self.statusBar().show()
+            self.saveBookmark()
 
     def closeFile(self, _value=False):
         if not self.mayContinue():
