@@ -93,6 +93,8 @@ class Login(QDialog):
         adminNamesResponse = requests.get(adminNamesPath)
         nameList += adminNamesResponse.content.decode().strip('\n').replace(
             '\r', '').split('\n')
+        nameList.append('admin')  #### TEMPORARY - DELETE AFTER ISSUE IS FIXED
+
         return nameList
 
 
@@ -628,6 +630,11 @@ class MainWindow(QMainWindow, WindowMixin):
         # e.g. self.defaultImgDir = '.../compData/erchen-halu'
         # self.defaultLabelDir = '.../compData/erchen-halu/erchen'
 
+        ##### TEMPORARY OVERRIDE ABOVE CODE & ACCESS THE OUTPUT FOLDER
+        if self.name == 'admin':
+            self.defaultImgDir = baseServerUrl + 'output/images/'
+            self.defaultLabelDir = baseServerUrl + 'output/labels/'
+
         # if 'bookmark.txt' exists in the labeltext directory, the update the
         # number of images already labeled
         self.bookmarkPath = self.defaultLabelDir + 'bookmark.txt'
@@ -681,8 +688,6 @@ class MainWindow(QMainWindow, WindowMixin):
                 adminResponseText = requests.get(compDataUrl + foldername).text
                 if self.name + '/' in re.findall(pattern, adminResponseText):
                     return foldername + self.name + '/'
-                else:
-                    print('error with admin folder structure.')
             elif foldername[:len(self.name)] == self.name:
                 return foldername
             elif foldername[:len(foldername) - 1].endswith(self.name):
@@ -1164,14 +1169,12 @@ class MainWindow(QMainWindow, WindowMixin):
         self.image.loadFromData(requests.get(filePath).content)
 
         self.labelFile = None
-        # self.canvas.verified = False
+        self.canvas.verified = False
 
         self.status("Loaded url %s" % filePath)
 
         self.filePath = filePath
         self.canvas.loadPixmap(QPixmap.fromImage(self.image))
-        # if self.labelFile:
-        #     self.loadLabels(self.labelFile.shapes)
         self.setClean()
         self.canvas.setEnabled(True)
         self.adjustScale(initial=True)
@@ -1188,11 +1191,21 @@ class MainWindow(QMainWindow, WindowMixin):
 
         basename = os.path.basename(os.path.splitext(self.filePath)[0])
         txtPath = os.path.join(self.defaultLabelDir, basename + TXT_EXT)
+        self.loadYOLOTXTByFilename(txtPath)
 
         # self.setWindowTitle(__appname__ + ' ' + filePath)
-        self.setWindowTitle('%d / %d images labeled; you are on image %d' %
-                            (self.numLabeled, len(self.imgNames),
-                             min(self.numLabeled + 1, len(self.imgNames))))
+        if self.name == 'admin':
+            numboxes = 0
+            if self.canvas.shapes != None:
+                numboxes = len(self.canvas.shapes)
+            self.setWindowTitle(
+                'ADMIN: %d bboxes in this image. %d / %d images labeled; on image %d. editing %s.'
+                % (numboxes, self.numLabeled, len(self.imgNames),
+                   min(self.numLabeled + 1, len(self.imgNames)), filePath))
+        else:
+            self.setWindowTitle('%d / %d images labeled; you are on image %d' %
+                                (self.numLabeled, len(self.imgNames),
+                                 min(self.numLabeled + 1, len(self.imgNames))))
 
         # Default : select last item if there is at least one item
         if self.labelList.count():
@@ -1575,19 +1588,16 @@ class MainWindow(QMainWindow, WindowMixin):
                     else:
                         self.labelHist.append(line)
 
-    # def loadYOLOTXTByFilename(self, txtPath):
-    #     if self.filePath is None:
-    #         return
-    #     # if os.path.isfile(txtPath) is False:
-    #     #     return
+    def loadYOLOTXTByFilename(self, txtPath):
+        if self.filePath is None:
+            return
 
-    #     # self.set_format(FORMAT_YOLO)
-    #     tYoloParseReader = YoloReader(txtPath, self.image)
-    #     shapes = tYoloParseReader.getShapes()
-    #     print(shapes)
-    #     if len(shapes) > 0:
-    #         self.loadLabels(shapes)
-    #         self.canvas.verified = tYoloParseReader.verified
+        # self.set_format(FORMAT_YOLO)
+        tYoloParseReader = YoloReader(txtPath, self.image)
+        shapes = tYoloParseReader.getShapes()
+        if len(shapes) > 0:
+            self.loadLabels(shapes)
+            # self.canvas.verified = tYoloParseReader.verified
 
     def togglePaintLabelsOption(self):
         for shape in self.canvas.shapes:
