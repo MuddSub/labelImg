@@ -73,19 +73,15 @@ class YOLOWriter:
 
 
 class YoloReader:
-    def __init__(self, filepath, image, classListPath=defaultClassListPath):
+    def __init__(self, filepath, image):
         # shapes type:
         # [labbel, [(x1,y1), (x2,y2), (x3,y3), (x4,y4)], color, color, difficult]
         self.shapes = []
         self.filepath = filepath
-        self.classListPath = classListPath
-
-        try:
-            classfilerequest = requests.get(self.classListPath)
-        except requests.exceptions.RequestException as e:
-            print('no existing classes.txt file on server')
-            print(e)
-            return
+        self.classListPath = 'data/predefined_classes.txt'
+        classesFile = open(self.classListPath, 'r')
+        self.classes = classesFile.read().strip('\n').split('\n')
+        # print ('classes: ', self.classes)
 
         try:
             bboxrequest = requests.get(self.filepath)
@@ -98,11 +94,6 @@ class YoloReader:
         except requests.exceptions.RequestException as e:
             print(e)
             return
-
-        # self.classes is a list of classes
-        self.classes = classfilerequest.content.decode().strip('\n').split(
-            '\n')
-        print('classes: ', self.classes)
 
         imgSize = [
             image.height(),
