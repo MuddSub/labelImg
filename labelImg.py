@@ -1601,8 +1601,8 @@ class MainWindow(QMainWindow, WindowMixin):
             shapes = tYoloParseReader.getShapes()
         elif self.name.startswith('admin'):
             truebasename = basename[len(self.name) + 1:]
-            txtPath1 = baseServerUrl + 'failed_labeler1/' + truebasename + TXT_EXT
-            txtPath2 = baseServerUrl + 'failed_labeler2/' + truebasename + TXT_EXT
+            txtPath1 = compDataUrl + 'failed_labeler1/' + truebasename + TXT_EXT
+            txtPath2 = compDataUrl + 'failed_labeler2/' + truebasename + TXT_EXT
             tYoloParseReader1 = YoloReader(txtPath1, self.image)
             shapes = tYoloParseReader1.getShapes()
             tYoloParseReader2 = YoloReader(txtPath2, self.image)
