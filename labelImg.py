@@ -1600,14 +1600,21 @@ class MainWindow(QMainWindow, WindowMixin):
             tYoloParseReader = YoloReader(txtPath, self.image)
             shapes = tYoloParseReader.getShapes()
         elif self.name.startswith('admin'):
-            truebasename = basename[len(self.name) + 1:]
-            txtPath1 = compDataUrl + 'failed_labeler1/' + truebasename + TXT_EXT
-            txtPath2 = compDataUrl + 'failed_labeler2/' + truebasename + TXT_EXT
-            tYoloParseReader1 = YoloReader(txtPath1, self.image)
-            shapes = tYoloParseReader1.getShapes()
-            tYoloParseReader2 = YoloReader(txtPath2, self.image)
-            shapes += tYoloParseReader2.getShapes()
-            shapes.sort()
+            # try searching for existing labels (which means admin already fixed it)
+            txtPath = os.path.join(self.defaultLabelDir, basename + TXT_EXT)
+            tYoloParseReader = YoloReader(txtPath, self.image)
+            shapes = tYoloParseReader.getShapes()
+
+            # if no existing labels exist, then display the ones from failed_labeler
+            if len(shapes) == 0:
+                truebasename = basename[len(self.name) + 1:]
+                txtPath1 = compDataUrl + 'failed_labeler1/' + truebasename + TXT_EXT
+                txtPath2 = compDataUrl + 'failed_labeler2/' + truebasename + TXT_EXT
+                tYoloParseReader1 = YoloReader(txtPath1, self.image)
+                shapes = tYoloParseReader1.getShapes()
+                tYoloParseReader2 = YoloReader(txtPath2, self.image)
+                shapes += tYoloParseReader2.getShapes()
+                shapes.sort()
 
         if len(shapes) > 0:
             self.loadLabels(shapes)
