@@ -360,7 +360,7 @@ class MainWindow(QMainWindow, WindowMixin):
 
         zoomIn = action(getStr('zoomin'),
                         partial(self.addZoom, 10),
-                        'Ctrl++',
+                        'Ctrl+=',
                         'zoom-in',
                         getStr('zoominDetail'),
                         enabled=False)
@@ -372,7 +372,7 @@ class MainWindow(QMainWindow, WindowMixin):
                          enabled=False)
         zoomOrg = action(getStr('originalsize'),
                          partial(self.setZoom, 100),
-                         'Ctrl+=',
+                         'Ctrl+0',
                          'zoom',
                          getStr('originalsizeDetail'),
                          enabled=False)
