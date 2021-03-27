@@ -626,6 +626,7 @@ class MainWindow(QMainWindow, WindowMixin):
             self.defaultImgDir = compDataUrl + self.sharedFolderName
         else:
             self.defaultImgDir = compDataUrl
+            print('only admin login should get here')
         self.defaultLabelDir = self.defaultImgDir + self.name + '/'
         # e.g. self.defaultImgDir = '.../compData/erchen-halu'
         # self.defaultLabelDir = '.../compData/erchen-halu/erchen'
@@ -1191,7 +1192,7 @@ class MainWindow(QMainWindow, WindowMixin):
 
         basename = os.path.basename(os.path.splitext(self.filePath)[0])
         txtPath = os.path.join(self.defaultLabelDir, basename + TXT_EXT)
-        self.loadYOLOTXTByFilename(txtPath)
+        self.loadYOLOTXTByFilename(basename)
 
         # self.setWindowTitle(__appname__ + ' ' + filePath)
         if self.name == 'admin':
@@ -1588,13 +1589,25 @@ class MainWindow(QMainWindow, WindowMixin):
                     else:
                         self.labelHist.append(line)
 
-    def loadYOLOTXTByFilename(self, txtPath):
+    def loadYOLOTXTByFilename(self, basename):
         if self.filePath is None:
             return
 
         # self.set_format(FORMAT_YOLO)
-        tYoloParseReader = YoloReader(txtPath, self.image)
-        shapes = tYoloParseReader.getShapes()
+        shapes = []
+        if self.name == 'admin':
+            txtPath = os.path.join(self.defaultLabelDir, basename + TXT_EXT)
+            tYoloParseReader = YoloReader(txtPath, self.image)
+            shapes = tYoloParseReader.getShapes()
+        elif self.name.startswith('admin'):
+            truebasename = basename[len(self.name) + 1:]
+            txtPath1 = baseServerUrl + 'failed_labeler1/' + truebasename + TXT_EXT
+            txtPath2 = baseServerUrl + 'failed_labeler2/' + truebasename + TXT_EXT
+            tYoloParseReader1 = YoloReader(txtPath1, self.image)
+            shapes = tYoloParseReader1.getShapes()
+            tYoloParseReader2 = YoloReader(txtPath2, self.image)
+            shapes += tYoloParseReader2.getShapes()
+
         if len(shapes) > 0:
             self.loadLabels(shapes)
             # self.canvas.verified = tYoloParseReader.verified
