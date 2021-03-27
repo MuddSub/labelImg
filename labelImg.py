@@ -1607,6 +1607,7 @@ class MainWindow(QMainWindow, WindowMixin):
             shapes = tYoloParseReader1.getShapes()
             tYoloParseReader2 = YoloReader(txtPath2, self.image)
             shapes += tYoloParseReader2.getShapes()
+            shapes.sort()
 
         if len(shapes) > 0:
             self.loadLabels(shapes)
